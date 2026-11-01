@@ -153,6 +153,33 @@ export const saveQuiz = (
   return send('PUT', `/api/subjects/${encodeURIComponent(subject)}/quizzes/${difficulty}${search}`, quiz)
 }
 
+/** An error of one file of an uploaded ZIP; `file` is its path inside the ZIP. */
+export interface FileError extends ValidationError {
+  file: string
+}
+
+export interface OccupiedQuiz {
+  subject: string
+  difficulty: number
+  name: string
+}
+
+/** How a ZIP upload went: nothing is written unless it is `imported`. */
+export type ImportOutcome =
+  | { status: 'imported'; quizzes: { subject: string; difficulty: number; name: string }[]; subjects: { key: string; name: string }[] }
+  | { status: 'invalid'; errors: FileError[] }
+  | { status: 'occupied'; occupied: OccupiedQuiz[] }
+
+/** Uploads a ZIP of the `Quizzes/` layout; occupied Difficulties are only replaced with `overwrite`. */
+export async function importZip(file: Blob, overwrite: boolean): Promise<ImportOutcome> {
+  const path = `/api/import${overwrite ? '?overwrite=true' : ''}`
+  const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: file })
+  if (response.ok) return { status: 'imported', ...(await response.json()) }
+  if (response.status === 400) return { status: 'invalid', ...(await response.json()) }
+  if (response.status === 409) return { status: 'occupied', ...(await response.json()) }
+  throw new Error(`${path}: ${response.status}`)
+}
+
 /** Removes the Quiz at this Difficulty. */
 export async function deleteQuiz(subject: string, difficulty: number): Promise<void> {
   const path = `/api/subjects/${encodeURIComponent(subject)}/quizzes/${difficulty}`

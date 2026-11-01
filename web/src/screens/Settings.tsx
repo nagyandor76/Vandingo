@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
 import { createSubject, exportUrl, fetchSubjects, saveSubjectSettings, takeOverFromSource, type SeedItem, type Subject } from '../api.ts'
 import Screen from './Screen.tsx'
+import ZipUpload from './ZipUpload.tsx'
 
 /** Subjects' settings, and creating a new Subject. */
 export default function Settings() {
@@ -41,6 +42,11 @@ export default function Settings() {
           </Button>
         </Stack>
       </Paper>
+
+      <Typography variant="h3" component="h2" sx={{ pt: 1 }}>
+        Quizek feltöltése
+      </Typography>
+      <ZipUpload onImported={load} />
 
       <Typography variant="h3" component="h2" sx={{ pt: 1 }}>
         Átvétel a forrásból
