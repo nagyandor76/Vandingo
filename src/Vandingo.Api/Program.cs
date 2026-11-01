@@ -2,6 +2,7 @@ using Vandingo.Api.Quizzes;
 using Vandingo.Api.Results;
 using Vandingo.Api.Storage;
 using Vandingo.Api.Subjects;
+using Vandingo.Api.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,8 +21,28 @@ app.UseStaticFiles();
 
 var api = app.MapGroup("/api");
 api.MapGet("/subjects", (SubjectStore subjects) => subjects.List());
+api.MapPost("/subjects", (NewSubject subject, SubjectStore subjects) =>
+{
+    if (SubjectStore.Check(subject) is [_, ..] errors) return ValidationError.Response(errors);
+    return subjects.Create(subject) is { } created
+        ? Results.Created($"/api/subjects/{created.Key}", created)
+        : Results.Conflict();
+});
+api.MapPut("/subjects/{key}", (string key, SubjectSettings settings, SubjectStore subjects) =>
+{
+    if (settings.MaxQuestions < 1)
+        return ValidationError.Response([new(null, "max_questions", "Legalább 1 kérdés kell.")]);
+    return subjects.Update(key, settings) is { } updated ? Results.Ok(updated) : Results.NotFound();
+});
 api.MapGet("/subjects/{key}/quizzes", (string key, QuizStore quizzes) =>
     quizzes.List(key) is { } list ? Results.Ok(list) : Results.NotFound());
+api.MapGet("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizStore quizzes) =>
+    quizzes.Find(key, difficulty) is { } quiz ? Results.Ok(quiz) : Results.NotFound());
+api.MapPut("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizDraft draft, QuizStore quizzes) =>
+{
+    if (QuizRules.Check(difficulty, draft) is [_, ..] errors) return ValidationError.Response(errors);
+    return quizzes.Save(key, difficulty, draft) ? Results.Ok() : Results.NotFound();
+});
 api.MapGet("/subjects/{key}/questions", (string key, int from, int to, QuizStore quizzes) =>
     quizzes.Questions(key, from, to) is { } questions ? Results.Ok(questions) : Results.NotFound());
 api.MapPost("/results", (NewResult result, ResultStore results) =>
@@ -29,6 +50,8 @@ api.MapPost("/results", (NewResult result, ResultStore results) =>
     var saved = results.Save(result);
     return Results.Created($"/api/results/{saved.Id}", saved);
 });
+api.MapGet("/results", (string participant, int? limit, ResultStore results) =>
+    results.List(participant, Math.Max(limit ?? 10, 0)));
 api.MapGet("/results/{id}", (string id, ResultStore results) =>
     results.Find(id) is { } result ? Results.Ok(result) : Results.NotFound());
 api.MapFallback(() => Results.NotFound());

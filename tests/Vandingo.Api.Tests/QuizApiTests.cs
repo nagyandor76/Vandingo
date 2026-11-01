@@ -73,6 +73,176 @@ public class QuizApiTests
     }
 
     [Fact]
+    public async Task A_saved_Quiz_of_every_question_type_can_be_loaded_back_from_its_own_file()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+
+        var response = await client.PutAsJsonAsync("/api/subjects/history/quizzes/7", ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var file = JsonSerializer.Deserialize<JsonElement>(app.ReadData("Quizzes/history/7.json"));
+        Assert.Equal(["name", "subject", "difficulty", "default_time", "questions"], file.EnumerateObject().Select(p => p.Name));
+        Assert.Equal("Görögök", file.GetProperty("name").GetString());
+        Assert.Equal("history", file.GetProperty("subject").GetString());
+        Assert.Equal(7, file.GetProperty("difficulty").GetInt32());
+        Assert.Equal(10, file.GetProperty("default_time").GetInt32());
+        var questions = file.GetProperty("questions");
+        Assert.Equal(
+            ["type,text,answer,time", "type,text,answer,speak_text", "type,text,options,answer,speak_answer", "type,text,options,answer", "type,text,answer"],
+            questions.EnumerateArray().Select(q => string.Join(',', q.EnumerateObject().Select(p => p.Name))));
+        Assert.Equal(["Spárta", "Athén"], questions[3].GetProperty("answer").EnumerateArray().Select(a => a.GetString()));
+
+        var loaded = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes/7");
+        Assert.Equal(JsonSerializer.Serialize(file), JsonSerializer.Serialize(loaded));
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        Assert.Equal([7], list.EnumerateArray().Select(q => q.GetProperty("difficulty").GetInt32()));
+    }
+
+    [Fact]
+    public async Task A_Quiz_of_fewer_than_5_Questions_is_rejected_as_a_whole_and_not_written()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var quiz = ValidQuiz();
+        quiz["questions"] = ((List<Dictionary<string, object?>>)quiz["questions"]!).Take(4).ToList();
+
+        var response = await app.CreateClient().PutAsJsonAsync("/api/subjects/history/quizzes/7", quiz);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = Assert.Single(await Errors(response));
+        Assert.Equal("questions", error.GetProperty("field").GetString());
+        Assert.False(error.TryGetProperty("row", out _));
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "7.json")));
+    }
+
+    [Theory]
+    [InlineData("default_time", null)]
+    [InlineData("default_time", 0)]
+    [InlineData("name", null)]
+    [InlineData("name", " ")]
+    public async Task A_Quiz_without_a_default_time_or_name_is_rejected_and_not_written(string field, object? value)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var quiz = ValidQuiz();
+        if (value is null) quiz.Remove(field); else quiz[field] = value;
+
+        var response = await app.CreateClient().PutAsJsonAsync("/api/subjects/history/quizzes/7", quiz);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal([field], (await Errors(response)).Select(e => e.GetProperty("field").GetString()));
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "7.json")));
+    }
+
+    [Theory]
+    [InlineData("""{ "type": "essay", "text": "Írj!", "answer": ["x"] }""", "type")]
+    [InlineData("""{ "type": "true-false", "text": " ", "answer": ["true"] }""", "text")]
+    [InlineData("""{ "type": "true-false", "text": "Állítás", "answer": ["igen"] }""", "answer")]
+    [InlineData("""{ "type": "true-false", "text": "Állítás", "answer": ["true", "false"] }""", "answer")]
+    [InlineData("""{ "type": "true-false", "text": "Állítás", "answer": ["true"], "time": 0 }""", "time")]
+    [InlineData("""{ "type": "word-matching", "text": "temple", "answer": [] }""", "answer")]
+    [InlineData("""{ "type": "word-matching", "text": "temple", "answer": ["templom", "szentély"] }""", "answer")]
+    [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén"], "answer": ["Athén"] }""", "options")]
+    [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", "Róma"], "answer": [] }""", "answer")]
+    [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", "Róma"], "answer": ["Spárta"] }""", "answer")]
+    [InlineData("""{ "type": "ordered", "text": "Sorrend?", "answer": ["Athén", "Róma"] }""", "options")]
+    [InlineData("""{ "type": "ordered", "text": "Sorrend?", "options": ["Athén", "Róma"], "answer": ["Róma", "Spárta"] }""", "answer")]
+    public async Task A_Question_breaking_its_types_rules_is_reported_by_row_and_field_and_nothing_is_written(string question, string field)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var quiz = ValidQuiz();
+        ((List<Dictionary<string, object?>>)quiz["questions"]!)[2] = JsonSerializer.Deserialize<Dictionary<string, object?>>(question)!;
+
+        var response = await app.CreateClient().PutAsJsonAsync("/api/subjects/history/quizzes/7", quiz);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = Assert.Single(await Errors(response));
+        Assert.Equal(2, error.GetProperty("row").GetInt32());
+        Assert.Equal(field, error.GetProperty("field").GetString());
+        Assert.NotEmpty(error.GetProperty("message").GetString()!);
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "7.json")));
+    }
+
+    [Fact]
+    public async Task Every_faulty_row_is_reported_and_an_existing_Quiz_is_left_unchanged()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        const string existing = """{ "name": "Régi", "subject": "history", "difficulty": 7, "default_time": 10, "questions": [] }""";
+        app.WriteData("Quizzes/history/7.json", existing);
+        var quiz = ValidQuiz();
+        var questions = (List<Dictionary<string, object?>>)quiz["questions"]!;
+        questions[0]["answer"] = Array.Empty<string>();
+        questions[4]["text"] = "";
+
+        var response = await app.CreateClient().PutAsJsonAsync("/api/subjects/history/quizzes/7", quiz);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(["0 answer", "4 text"], (await Errors(response)).Select(e => $"{e.GetProperty("row").GetInt32()} {e.GetProperty("field").GetString()}"));
+        Assert.Equal(existing, app.ReadData("Quizzes/history/7.json"));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(21)]
+    public async Task A_Difficulty_outside_1_to_20_is_rejected(int difficulty)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+
+        var response = await app.CreateClient().PutAsJsonAsync($"/api/subjects/history/quizzes/{difficulty}", ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(["difficulty"], (await Errors(response)).Select(e => e.GetProperty("field").GetString()));
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", $"{difficulty}.json")));
+    }
+
+    [Fact]
+    public async Task Unknown_Quiz_is_not_found()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+
+        var response = await app.CreateClient().GetAsync("/api/subjects/history/quizzes/4");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private static async Task<JsonElement[]> Errors(HttpResponseMessage response) =>
+        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").EnumerateArray().ToArray();
+
+    /// <summary>A valid Quiz of exactly 5 Questions, one or more of every question type.</summary>
+    private static Dictionary<string, object?> ValidQuiz() => new()
+    {
+        ["name"] = "Görögök",
+        ["default_time"] = 10,
+        ["questions"] = new List<Dictionary<string, object?>>
+        {
+            // Empty cells of the Editor's grid: left out of the file.
+            new()
+            {
+                ["type"] = "true-false", ["text"] = "Athén Görögországban van.", ["options"] = Array.Empty<string>(),
+                ["answer"] = new[] { "true" }, ["time"] = 8, ["speak_text"] = "", ["speak_answer"] = null,
+            },
+            new() { ["type"] = "word-matching", ["text"] = "temple", ["answer"] = new[] { "templom" }, ["speak_text"] = "en-GB" },
+            new()
+            {
+                ["type"] = "multiple-choice", ["text"] = "Melyek görög városok?",
+                ["options"] = new[] { "Athén", "Róma", "Spárta" }, ["answer"] = new[] { "Athén", "Spárta" }, ["speak_answer"] = "hu-HU",
+            },
+            new()
+            {
+                ["type"] = "ordered", ["text"] = "Melyik alapult előbb?",
+                ["options"] = new[] { "Athén", "Spárta" }, ["answer"] = new[] { "Spárta", "Athén" },
+            },
+            new() { ["type"] = "true-false", ["text"] = "Spárta sziget.", ["answer"] = new[] { "false" } },
+        },
+    };
+
+    [Fact]
     public async Task Quiz_list_of_unknown_subject_is_not_found()
     {
         using var app = new VandingoApp();

@@ -45,6 +45,39 @@ public class ResultApiTests
     }
 
     [Fact]
+    public async Task Result_list_gives_only_the_Participants_Results_newest_first_up_to_the_limit()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("results/a.json", StoredResult("a", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+        app.WriteData("results/b.json", StoredResult("b", "2026-10-22T08:00:00+00:00", "Janka", "english"));
+        app.WriteData("results/c.json", StoredResult("c", "2026-10-23T08:00:00+00:00", "Vanda", "history"));
+        app.WriteData("results/d.json", StoredResult("d", "2026-10-21T08:00:00+00:00", "Janka", "history"));
+        app.WriteData("results/e.json", StoredResult("e", "2026-10-19T08:00:00+00:00", "Janka", "history"));
+
+        var results = await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/results?participant=Janka&limit=3");
+
+        Assert.Equal(["b", "d", "a"], results.EnumerateArray().Select(r => r.GetProperty("id").GetString()));
+        Assert.Equal("english", results[0].GetProperty("subject").GetString());
+    }
+
+    [Fact]
+    public async Task Result_list_of_a_Participant_without_Results_is_empty()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("results/a.json", StoredResult("a", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+
+        var results = await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/results?participant=Gréta&limit=10");
+
+        Assert.Empty(results.EnumerateArray());
+    }
+
+    private static string StoredResult(string id, string completedAt, string participant, string subject) => $$"""
+        { "id": "{{id}}", "completedAt": "{{completedAt}}", "participant": "{{participant}}", "subject": "{{subject}}",
+          "difficultyFrom": 1, "difficultyTo": 5, "total": 20, "correct": 17, "incorrect": 3, "scorePercent": 85,
+          "timeLimitSeconds": 200, "elapsedSeconds": 156 }
+        """;
+
+    [Fact]
     public async Task Unknown_Result_is_not_found()
     {
         using var app = new VandingoApp();

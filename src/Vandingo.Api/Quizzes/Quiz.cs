@@ -25,3 +25,12 @@ public sealed record QuizSummary(
     [property: JsonPropertyName("difficulty")] int Difficulty,
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("question_counts")] IReadOnlyDictionary<string, int> QuestionCounts);
+
+/// <summary>
+/// A Quiz as the Editor saves it: its Subject and Difficulty come from where it is saved.
+/// Anything may be missing until it is checked.
+/// </summary>
+public sealed record QuizDraft(
+    [property: JsonPropertyName("name")] string? Name,
+    [property: JsonPropertyName("default_time")] int? DefaultTime,
+    [property: JsonPropertyName("questions")] IReadOnlyList<Question>? Questions);

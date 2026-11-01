@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Alert, Button, CircularProgress, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Alert, Button, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { fetchQuizzes, fetchSubjects, type QuizSummary, type Subject } from '../api.ts'
 import { unlockAudio } from '../audio.ts'
-import { participants, type Participant } from '../participants.ts'
+import type { Participant } from '../participants.ts'
 import { usableTypes, type QuestionType } from '../practice/engine.ts'
+import ParticipantPicker from './ParticipantPicker.tsx'
 import Screen from './Screen.tsx'
 
 /** Picks the Participant, the Subject and the inclusive Difficulty range of a Practice. */
@@ -80,20 +81,7 @@ export default function PracticeStart() {
             <Typography variant="h3" component="h2">
               Ki tölti ki?
             </Typography>
-            <ToggleButtonGroup
-              exclusive
-              fullWidth
-              color="primary"
-              value={participant}
-              onChange={(_, value: Participant | null) => value && setParticipant(value)}
-              aria-label="Kitöltő"
-            >
-              {participants.map((name) => (
-                <ToggleButton key={name} value={name} sx={{ minHeight: 48 }}>
-                  {name}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+            <ParticipantPicker value={participant} onChange={setParticipant} />
           </Stack>
 
           <TextField select label="Tantárgy" value={subject} onChange={(event) => changeSubject(event.target.value)}>

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Vandingo.Api.Storage;
 
 namespace Vandingo.Api.Results;
@@ -22,13 +21,21 @@ public sealed class ResultStore(DataPaths paths)
             result.TimeLimitSeconds,
             result.ElapsedSeconds);
 
-        Directory.CreateDirectory(paths.ResultsDirectory);
-        // Written to a temporary file first, so an interrupted write never leaves a broken Result.
-        var file = FileOf(saved.Id);
-        var temporary = file + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(saved));
-        File.Move(temporary, file, overwrite: true);
+        JsonFile.Write(FileOf(saved.Id), saved);
         return saved;
+    }
+
+    /// <summary>The Participant's latest Results, whatever their Subject, newest first.</summary>
+    public IReadOnlyList<Result> List(string participant, int limit)
+    {
+        if (!Directory.Exists(paths.ResultsDirectory)) return [];
+
+        return Directory.EnumerateFiles(paths.ResultsDirectory, "*.json")
+            .Select(JsonFile.Read<Result>)
+            .Where(result => result.Participant == participant)
+            .OrderByDescending(result => result.CompletedAt)
+            .Take(limit)
+            .ToList();
     }
 
     /// <summary>The Result with this id, or null if there is none.</summary>
@@ -36,7 +43,7 @@ public sealed class ResultStore(DataPaths paths)
     {
         if (id.IndexOfAny(['/', '\\', '.']) >= 0) return null;
         var file = FileOf(id);
-        return File.Exists(file) ? JsonSerializer.Deserialize<Result>(File.ReadAllText(file)) : null;
+        return File.Exists(file) ? JsonFile.Read<Result>(file) : null;
     }
 
     private string FileOf(string id) => Path.Combine(paths.ResultsDirectory, $"{id}.json");

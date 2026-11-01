@@ -20,6 +20,7 @@ import {
   type PracticeState,
   type TrueFalseAnswer,
 } from '../practice/engine.ts'
+import { formatTime } from '../format.ts'
 import Screen from './Screen.tsx'
 
 type SaveStatus = 'saving' | 'saved' | 'failed'
@@ -466,5 +467,3 @@ function Tally({ label, value, color }: { label: string; value: number; color: s
     </Paper>
   )
 }
-
-const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
