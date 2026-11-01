@@ -158,7 +158,8 @@ export interface FileError extends ValidationError {
   file: string
 }
 
-export interface OccupiedQuiz {
+/** A Quiz by its Subject, Difficulty and name: an occupied one (the existing name) or an imported one. */
+export interface QuizRef {
   subject: string
   difficulty: number
   name: string
@@ -166,9 +167,9 @@ export interface OccupiedQuiz {
 
 /** How a ZIP upload went: nothing is written unless it is `imported`. */
 export type ImportOutcome =
-  | { status: 'imported'; quizzes: { subject: string; difficulty: number; name: string }[]; subjects: { key: string; name: string }[] }
+  | { status: 'imported'; quizzes: QuizRef[]; subjects: { key: string; name: string }[] }
   | { status: 'invalid'; errors: FileError[] }
-  | { status: 'occupied'; occupied: OccupiedQuiz[] }
+  | { status: 'occupied'; occupied: QuizRef[] }
 
 /** Uploads a ZIP of the `Quizzes/` layout; occupied Difficulties are only replaced with `overwrite`. */
 export async function importZip(file: Blob, overwrite: boolean): Promise<ImportOutcome> {

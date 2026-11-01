@@ -250,4 +250,92 @@ public class ImportApiTests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Corrupt_zip_entry_gives_400_for_that_file_and_nothing_is_written()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+        var bytes = ZipOf(new Dictionary<string, string>
+        {
+            ["history/1.json"] = QuizJson("Jó"),
+            ["history/2.json"] = QuizJson("Sérült") + new string(' ', 4000),
+        }).ReadAsByteArrayAsync().Result;
+        CorruptData(bytes, "history/2.json");
+
+        var response = await client.PostAsync("/api/import", new ByteArrayContent(bytes));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errors = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").EnumerateArray().ToList();
+        Assert.Equal("history/2.json", Assert.Single(errors).GetProperty("file").GetString());
+        Assert.Empty(await QuizListOf(client, "history"));
+    }
+
+    // Overwrites the compressed data of one entry (found by its local header) with bytes that are not valid deflate.
+    private static void CorruptData(byte[] zip, string name)
+    {
+        var nameBytes = System.Text.Encoding.UTF8.GetBytes(name);
+        for (var i = 0; i + 30 + nameBytes.Length < zip.Length; i++)
+        {
+            if (zip[i] != 0x50 || zip[i + 1] != 0x4B || zip[i + 2] != 3 || zip[i + 3] != 4) continue;
+            if (!zip.AsSpan(i + 30, nameBytes.Length).SequenceEqual(nameBytes)) continue;
+            var start = i + 30 + nameBytes.Length + BitConverter.ToUInt16(zip, i + 28);
+            for (var k = 0; k < 8; k++) zip[start + k] = 0xFF;
+            return;
+        }
+        throw new InvalidOperationException("entry not found");
+    }
+
+    [Fact]
+    public async Task Files_that_are_not_Quiz_or_Subject_files_are_left_out_without_error()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+
+        var response = await client.PostAsync("/api/import", ZipOf(new Dictionary<string, string>
+        {
+            ["history/3.json"] = QuizJson("Egyiptom"),
+            ["docs/readme.json"] = "nem Quiz",
+            ["__MACOSX/._x.json"] = "nem Quiz",
+            ["Quizzes/x.json"] = "nem Quiz",
+            ["history/notes.json"] = "nem Quiz",
+        }));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(["3 Egyiptom"], await QuizListOf(client, "history"));
+    }
+
+    [Fact]
+    public async Task Quiz_file_in_a_folder_with_an_invalid_Subject_key_is_still_an_error()
+    {
+        using var app = new VandingoApp();
+
+        var response = await app.CreateClient().PostAsync("/api/import", ZipOf(new Dictionary<string, string>
+        {
+            ["Rossz_Kulcs/3.json"] = QuizJson("Egyiptom"),
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Two_subject_jsons_in_the_same_Subject_folder_are_an_error()
+    {
+        using var app = new VandingoApp();
+        var client = app.CreateClient();
+
+        var response = await client.PostAsync("/api/import", ZipOf(new Dictionary<string, string>
+        {
+            ["english/subject.json"] = """{ "key": "english", "name": "Angol", "max_questions": 12, "auto_advance": true }""",
+            ["Quizzes/english/subject.json"] = """{ "key": "english", "name": "Másik", "max_questions": 5, "auto_advance": false }""",
+            ["english/2.json"] = QuizJson("Állatok"),
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errors = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors");
+        Assert.Equal("english/subject.json", Assert.Single(errors.EnumerateArray()).GetProperty("file").GetString());
+        Assert.Empty(await client.GetFromJsonAsync<JsonElement[]>("/api/subjects") ?? []);
+    }
 }
