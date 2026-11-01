@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues and specs live as local markdown files under `.scratch/`, with their status in YAML frontmatter. `npm run tickets` lists them (`-- --ready` for the ones that can start now). See `docs/agents/issue-tracker.md`.
+Issues and specs live as local markdown files under `.scratch/`, with their status in YAML frontmatter. `dotnet run scripts/tickets.cs` lists them (`-- --ready` for the ones that can start now). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -21,7 +21,6 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 - **Backend HTTP API tests:** `dotnet test` (repo root).
 - **Practice engine tests:** `cd web && npm test`.
 - **Typecheck frontend:** `cd web && npm run typecheck`.
-- **Typecheck repo scripts** (`scripts/*.ts`, run directly by Node 22.18+): `npm run typecheck:scripts`.
 - **Deploy:** Railway builds the root `Dockerfile`; the data directory is a Railway Volume at `/data`. See `docs/deployment.md`.
 
 The data directory is set by `Vandingo:DataDirectory` (env var `Vandingo__DataDirectory`; default `/data`, `../../data` in Development; relative paths resolve against `src/Vandingo.Api`). The initial-quiz source is `Vandingo:SeedDirectory` (default: the `Quizzes/` copied next to the app at build).

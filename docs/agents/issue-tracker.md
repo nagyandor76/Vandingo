@@ -25,9 +25,9 @@ blocked_by: [1, 7]
 - `blocked_by`: the numbers of the tickets in the same feature that must be `done` first, as plain integers (`7`, not `07`). `[]` when nothing blocks it. Specs have no `blocked_by`.
 - `type` (wayfinding tickets only): `research`, `prototype`, `grilling` or `task`.
 
-Keep it flat: one `key: value` per line, values are a single word or number, or an inline list `[a, b]`. No nested keys, no multi-line values, no free text: notes belong in the body (e.g. a `**Megjegyzés:**` line). `scripts/tickets.ts` reads exactly this format.
+Keep it flat: one `key: value` per line, values are a single word or number, or an inline list `[a, b]`. No nested keys, no multi-line values, no free text: notes belong in the body (e.g. a `**Megjegyzés:**` line). `scripts/tickets.cs` reads it as YAML (YamlDotNet) and stops with the file name if a value has the wrong type.
 
-To see where things stand: `npm run tickets` (repo root) lists every ticket with its status; `npm run tickets -- --ready` only the open ones whose blockers are all done; add `--json` for machine-readable output, or `--mermaid` for the dependency graph as a Mermaid flowchart coloured by status.
+To see where things stand: `dotnet run scripts/tickets.cs` (from the repo root; a .NET 10 file-based app, the first run takes a while to build) lists every ticket with its status; `dotnet run scripts/tickets.cs -- --ready` only the open ones whose blockers are all done; add `--json` for machine-readable output, or `--mermaid` for the dependency graph as a Mermaid flowchart coloured by status.
 
 ## When a skill says "publish to the issue tracker"
 

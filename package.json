@@ -1,10 +1,7 @@
 {
   "name": "vandingo",
   "private": true,
-  "type": "module",
   "scripts": {
-    "start": "cd web && npm install && npm run build && cd .. && dotnet run --project src/Vandingo.Api --launch-profile http",
-    "tickets": "node scripts/tickets.ts",
-    "typecheck:scripts": "cd web && npx tsc -p ../scripts"
+    "start": "cd web && npm install && npm run build && cd .. && dotnet run --project src/Vandingo.Api --launch-profile http"
   }
 }
