@@ -8,12 +8,12 @@ Az animációk, a hangos/vizuális visszajelzés finomítása, az ikonok és az 
 
 **Blocked by:** 01. A 02–05 előtt érdemes elkészíteni.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Stílusirány kiválasztva a prototípus változatai közül, a döntés indoka a Comments alatt
-- [ ] MUI téma: paletta (köztük a helyes/hibás szín), tipográfia, lekerekítés, gombstílus egy helyen definiálva
-- [ ] A közös képernyőkeret fejlécet és visszalépést ad, 360 px szélességen sincs vízszintes görgetés
-- [ ] A kezdőképernyő a választott stílusban, nagy, hüvelykujjal könnyen nyomható gombokkal
+- [x] MUI téma: paletta (köztük a helyes/hibás szín), tipográfia, lekerekítés, gombstílus egy helyen definiálva
+- [x] A közös képernyőkeret fejlécet és visszalépést ad, 360 px szélességen sincs vízszintes görgetés
+- [x] A kezdőképernyő a választott stílusban, nagy, hüvelykujjal könnyen nyomható gombokkal
 - [x] A prototípus kódja egy eldobható ágon van megőrizve (`prototype/design`), a main ágon nem marad belőle semmi
 
 ## Comments
