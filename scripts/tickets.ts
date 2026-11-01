@@ -5,34 +5,51 @@
 //   npm run tickets -- --json       machine-readable
 //   npm run tickets -- --mermaid    dependency graph as a Mermaid flowchart, coloured by status
 //
+// Node runs this TypeScript directly (type stripping, Node 22.18+); `npm run typecheck:scripts` checks it.
 // The frontmatter format is described in docs/agents/issue-tracker.md.
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+
+type Value = string | number | (string | number)[]
+
+interface Ticket {
+  feature: string
+  number: number
+  title: string
+  status: string
+  blockedBy: number[]
+  file: string
+  /** The blockers that are not done yet. */
+  waitingOn: number[]
+  /** Open, and nothing it waits on. */
+  ready: boolean
+}
 
 const root = join(import.meta.dirname, '..', '.scratch')
 const args = process.argv.slice(2)
 const openStatuses = ['ready-for-agent', 'ready-for-human']
 
 /** The frontmatter's flat `key: value` lines; `[a, b]` is a list, whole numbers are numbers. */
-function frontmatter(text, file) {
+function frontmatter(text: string, file: string): Record<string, Value> {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
   if (!match) throw new Error(`${file}: no frontmatter`)
-  const scalar = (value) => (/^\d+$/.test(value) ? Number(value) : value)
+  const scalar = (value: string) => (/^\d+$/.test(value) ? Number(value) : value)
   return Object.fromEntries(
     match[1]
       .split(/\r?\n/)
       .filter((line) => line.trim() && !line.trimStart().startsWith('#'))
-      .map((line) => {
-        const [, key, value] = /^(\w+):\s*(.*)$/.exec(line) ?? [null, null, null]
-        if (!key) throw new Error(`${file}: can't read frontmatter line "${line}"`)
+      .map((line): [string, Value] => {
+        const entry = /^(\w+):\s*(.*)$/.exec(line)
+        if (!entry) throw new Error(`${file}: can't read frontmatter line "${line}"`)
+        const [, key, value] = entry
         const list = /^\[(.*)\]$/.exec(value.trim())
         return [key, list ? list[1].split(',').map((item) => item.trim()).filter(Boolean).map(scalar) : scalar(value.trim())]
       }),
   )
 }
 
-const tickets = readdirSync(root, { withFileTypes: true })
+const tickets: Ticket[] = readdirSync(root, { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, 'issues')))
   .flatMap(({ name: feature }) =>
     readdirSync(join(root, feature, 'issues'))
@@ -42,30 +59,36 @@ const tickets = readdirSync(root, { withFileTypes: true })
         const path = join(root, feature, 'issues', file)
         const text = readFileSync(path, 'utf8')
         const meta = frontmatter(text, path)
+        const blockedBy = meta.blocked_by ?? []
+        if (!Array.isArray(blockedBy) || blockedBy.some((n) => typeof n !== 'number')) {
+          throw new Error(`${path}: blocked_by must be a list of ticket numbers`)
+        }
         return {
           feature,
           number: Number(file.split('-')[0]),
           title: /^# (.*)$/m.exec(text)?.[1] ?? file,
-          status: meta.status ?? '?',
-          blockedBy: meta.blocked_by ?? [],
+          status: String(meta.status ?? '?'),
+          blockedBy: blockedBy as number[],
           file: join('.scratch', feature, 'issues', file),
+          waitingOn: [],
+          ready: false,
         }
       }),
   )
 
 for (const ticket of tickets) {
   const blockers = ticket.blockedBy.map((n) => tickets.find((t) => t.feature === ticket.feature && t.number === n))
-  ticket.waitingOn = ticket.blockedBy.filter((n, i) => blockers[i]?.status !== 'done')
+  ticket.waitingOn = ticket.blockedBy.filter((_, i) => blockers[i]?.status !== 'done')
   ticket.ready = openStatuses.includes(ticket.status) && ticket.waitingOn.length === 0
 }
 
 const shown = args.includes('--ready') ? tickets.filter((t) => t.ready) : tickets
 
 /** A Mermaid flowchart: one box per ticket coloured by status, an arrow from each blocker to what it blocks. */
-function mermaid(list) {
-  const id = (feature, number) => `${feature.replace(/\W/g, '_')}_${number}`
-  const label = (t) => `${String(t.number).padStart(2, '0')}: ${t.title.replace(/^\d+:\s*/, '')}`.replaceAll('"', '#quot;')
-  const statusClass = (status) => status.replace(/\W/g, '_')
+function mermaid(list: Ticket[]): string {
+  const id = (feature: string, number: number | string) => `${feature.replace(/\W/g, '_')}_${number}`
+  const label = (t: Ticket) => `${String(t.number).padStart(2, '0')}: ${t.title.replace(/^\d+:\s*/, '')}`.replaceAll('"', '#quot;')
+  const statusClass = (status: string) => status.replace(/\W/g, '_')
   const lines = ['flowchart LR']
   for (const feature of new Set(list.map((t) => t.feature))) {
     lines.push(`  subgraph ${id(feature, 'feature')}["${feature}"]`)
@@ -95,7 +118,7 @@ if (args.includes('--json')) {
 } else if (args.includes('--mermaid')) {
   console.log(mermaid(shown))
 } else {
-  const pad = (text, width) => String(text).padEnd(width)
+  const pad = (text: string, width: number) => text.padEnd(width)
   const statusWidth = Math.max(6, ...shown.map((t) => t.status.length))
   for (const t of shown) {
     const waiting = t.waitingOn.length ? `  (vár: ${t.waitingOn.join(', ')})` : t.ready ? '  ← indítható' : ''

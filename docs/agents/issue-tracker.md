@@ -25,7 +25,7 @@ blocked_by: [1, 7]
 - `blocked_by`: the numbers of the tickets in the same feature that must be `done` first, as plain integers (`7`, not `07`). `[]` when nothing blocks it. Specs have no `blocked_by`.
 - `type` (wayfinding tickets only): `research`, `prototype`, `grilling` or `task`.
 
-Keep it flat: one `key: value` per line, values are a single word or number, or an inline list `[a, b]`. No nested keys, no multi-line values, no free text: notes belong in the body (e.g. a `**Megjegyzés:**` line). `scripts/tickets.mjs` reads exactly this format.
+Keep it flat: one `key: value` per line, values are a single word or number, or an inline list `[a, b]`. No nested keys, no multi-line values, no free text: notes belong in the body (e.g. a `**Megjegyzés:**` line). `scripts/tickets.ts` reads exactly this format.
 
 To see where things stand: `npm run tickets` (repo root) lists every ticket with its status; `npm run tickets -- --ready` only the open ones whose blockers are all done; add `--json` for machine-readable output, or `--mermaid` for the dependency graph as a Mermaid flowchart coloured by status.
 
