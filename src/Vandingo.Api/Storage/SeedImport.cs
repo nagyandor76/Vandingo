@@ -28,17 +28,30 @@ public static class SeedImport
                 var destination = Path.Combine(paths.QuizzesDirectory, subject, Path.GetFileName(source));
                 if (File.Exists(destination)) continue;
 
-                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(source, destination);
-                copied.Add(new SeedItem(subject, isSubject ? null : int.Parse(fileName), DisplayName(destination)));
+                // Read and check the source before writing, so a faulty file is left out whole instead of half copied.
+                string text, name;
+                try
+                {
+                    text = File.ReadAllText(source);
+                    name = DisplayName(text);
+                }
+                catch (Exception exception) when (exception is JsonException or IOException)
+                {
+                    continue;
+                }
+
+                JsonFile.WriteText(destination, text);
+                copied.Add(new SeedItem(subject, isSubject ? null : int.Parse(fileName), name));
             }
         }
         return copied;
     }
 
-    private static string DisplayName(string file)
+    private static string DisplayName(string json)
     {
-        using var document = JsonDocument.Parse(File.ReadAllText(file));
-        return document.RootElement.TryGetProperty("name", out var name) ? name.GetString() ?? "" : "";
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.ValueKind == JsonValueKind.Object
+            && document.RootElement.TryGetProperty("name", out var name)
+            && name.ValueKind == JsonValueKind.String ? name.GetString()! : "";
     }
 }

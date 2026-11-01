@@ -23,16 +23,12 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
     public sealed record Invalid(IReadOnlyList<FileError> Errors) : Outcome;
 
     /// <summary>These Difficulties are taken and overwriting was not confirmed; nothing was written.</summary>
-    public sealed record Occupied(IReadOnlyList<OccupiedQuiz> Quizzes) : Outcome;
+    public sealed record Occupied(IReadOnlyList<QuizRef> Quizzes) : Outcome;
 
-    public sealed record Imported(IReadOnlyList<ImportedQuiz> Quizzes, IReadOnlyList<ImportedSubject> Subjects) : Outcome;
+    public sealed record Imported(IReadOnlyList<QuizRef> Quizzes, IReadOnlyList<ImportedSubject> Subjects) : Outcome;
 
-    public sealed record OccupiedQuiz(
-        [property: JsonPropertyName("subject")] string Subject,
-        [property: JsonPropertyName("difficulty")] int Difficulty,
-        [property: JsonPropertyName("name")] string Name);
-
-    public sealed record ImportedQuiz(
+    /// <summary>A Quiz by its Subject, Difficulty and name: an occupied one (the existing name) or an imported one.</summary>
+    public sealed record QuizRef(
         [property: JsonPropertyName("subject")] string Subject,
         [property: JsonPropertyName("difficulty")] int Difficulty,
         [property: JsonPropertyName("name")] string Name);
@@ -87,30 +83,39 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
             if (errors.Count > 0) return new Invalid(errors);
 
             var taken = candidates
-                .Select(c => quizzes.Find(c.Subject, c.Difficulty) is { } existing ? new OccupiedQuiz(c.Subject, c.Difficulty, existing.Name) : null)
-                .OfType<OccupiedQuiz>()
+                .Select(c => quizzes.Find(c.Subject, c.Difficulty) is { } existing ? new QuizRef(c.Subject, c.Difficulty, existing.Name) : null)
+                .OfType<QuizRef>()
                 .ToList();
             if (taken.Count > 0 && !overwrite) return new Occupied(taken);
 
             foreach (var subject in newSubjects) subjects.Import(subject);
             foreach (var c in candidates) quizzes.Save(c.Subject, c.Difficulty, c.Draft, originalDifficulty: null, overwrite: true);
             return new Imported(
-                candidates.Select(c => new ImportedQuiz(c.Subject, c.Difficulty, c.Draft.Name!.Trim())).ToList(),
+                candidates.Select(c => new QuizRef(c.Subject, c.Difficulty, c.Draft.Name!.Trim())).ToList(),
                 newSubjects.Select(s => new ImportedSubject(s.Key, s.Name)).ToList());
         }
     }
 
-    /// <summary>The <c>&lt;subject&gt;/&lt;file&gt;.json</c> entries; everything else (<c>results/</c>, other files) is left out.</summary>
+    /// <summary>
+    /// The <c>&lt;subject&gt;/&lt;number&gt;.json</c> and <c>&lt;subject&gt;/subject.json</c> entries;
+    /// everything else (<c>results/</c>, other files and folders) is left out.
+    /// </summary>
     private static List<Item> Relevant(ZipArchive zip, List<FileError> errors)
     {
         var found = new List<Item>();
+        var subjectFiles = new HashSet<string>();
         foreach (var entry in zip.Entries.Where(e => e.Name != ""))
         {
             var parts = entry.FullName.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts is [QuizzesFolder, .. var rest] && rest.Length == 2) parts = rest;
-            if (parts.Length != 2 || parts[0] == "results" || !parts[1].EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
+            if (parts.Length != 2 || parts[0] == "results" || !IsQuizOrSubjectFile(parts[1])) continue;
 
             var path = string.Join('/', parts);
+            if (parts[1] == SubjectFile && !subjectFiles.Add(parts[0]))
+            {
+                errors.Add(new(path, null, "file", "A subject.json a ZIP-ben többször szerepel ebben a mappában."));
+                continue;
+            }
             if (SubjectStore.Check(new NewSubject(parts[0], "-")).Count > 0)
                 errors.Add(new(path, null, "subject", "A mappa neve csak kisbetű (a–z), számjegy (0–9) és - jel lehet."));
             else
@@ -119,6 +124,12 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
         return found;
     }
 
+    private static bool IsQuizOrSubjectFile(string name) =>
+        name == SubjectFile
+        || (name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            && name.Length > ".json".Length
+            && name[..^".json".Length].All(char.IsAsciiDigit));
+
     private static bool TryReadDraft(Item item, List<FileError> errors, out QuizDraft draft)
     {
         try
@@ -126,6 +137,12 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
             using var stream = item.Entry.Open();
             draft = JsonSerializer.Deserialize<QuizDraft>(stream) ?? throw new JsonException("A fájl üres.");
             return true;
+        }
+        catch (Exception exception) when (exception is InvalidDataException or IOException)
+        {
+            errors.Add(new(item.Path, null, "file", $"A ZIP-bejegyzés sérült: {exception.Message}"));
+            draft = null!;
+            return false;
         }
         catch (JsonException exception)
         {
@@ -158,6 +175,11 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
             {
                 using var stream = item.Entry.Open();
                 subject = JsonSerializer.Deserialize<Subject>(stream);
+            }
+            catch (Exception exception) when (exception is InvalidDataException or IOException)
+            {
+                errors.Add(new(path, null, "file", $"A ZIP-bejegyzés sérült: {exception.Message}"));
+                continue;
             }
             catch (JsonException exception)
             {

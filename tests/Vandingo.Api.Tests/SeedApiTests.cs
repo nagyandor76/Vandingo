@@ -101,4 +101,21 @@ public class SeedApiTests
         Assert.Equal(0, copied.GetArrayLength());
         Assert.Equal(Quiz("history", 3, "Egyiptom"), app.ReadData("Quizzes/history/3.json"));
     }
+
+    [Fact]
+    public async Task Faulty_source_file_is_left_out_and_everything_else_is_copied_whole()
+    {
+        using var app = new VandingoApp();
+        app.WriteSeed("history/subject.json", History);
+        await app.CreateClient().GetAsync("/api/subjects"); // startup copy
+        app.WriteSeed("history/4.json", Quiz("history", 4, "Athén"));
+        app.WriteSeed("history/5.json", "ez nem JSON");
+        app.WriteSeed("history/6.json", Quiz("history", 6, "Spárta"));
+
+        var copied = await Seed(app);
+
+        Assert.Equal([4, 6], copied.EnumerateArray().Select(c => c.GetProperty("difficulty").GetInt32()));
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "5.json")));
+        Assert.Empty(Directory.GetFiles(Path.Combine(app.DataDirectory, "Quizzes", "history"), "*.tmp"));
+    }
 }
