@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [7]
 ---
 
@@ -14,3 +14,7 @@ Spec: [../spec.md](../spec.md) – User Story 46
 - [x] A gridből kimásolt tartomány Excelbe beilleszthető
 - [x] Beillesztett hibás adat mentéskor a szokásos módon kiemelődik
 - [ ] Kézzel kipróbálva Excelből Windows alatt
+
+## Comments
+
+- 2026-11-01: Elkészült és a main-ben van. A vágólap-logika (`web/src/editor/clipboard.ts`) 12 egységteszttel fedett. A grid kijelölése és a Ctrl+C / Ctrl+V a böngészőben, valódi Excellel még nincs kipróbálva (ez a nyitott jelölőnégyzet). Külön megerősítendő: elsül-e a paste/copy esemény nem szerkesztett cellán, és működik-e a Shift+nyíl kijelölés AG Gridben.

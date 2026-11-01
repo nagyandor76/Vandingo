@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [1]
 ---
 
@@ -12,3 +12,7 @@ Spec: [../spec.md](../spec.md) – User Story 62
 - [x] API-teszt: a letöltött ZIP tartalmazza az adatkönyvtár összes fájlját, változatlan szerkezetben
 - [x] A fájlnév tartalmazza a letöltés dátumát
 - [ ] Telefonon és számítógépen is letölthető
+
+## Comments
+
+- 2026-11-01: Elkészült és a main-ben van: `GET /api/export` ZIP, a fájlnévben dátummal; az API-teszt fedi. A letöltés telefonon és számítógépen még nincs kézzel kipróbálva (ez a nyitott jelölőnégyzet).

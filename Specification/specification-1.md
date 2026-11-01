@@ -48,6 +48,8 @@ A legördülő listák törzsadatai az MVP-ben lehetnek hardkódoltak. A gridhez
 
 **Kvíz törlése:** teljes kvíz törölhető; a törlés előtt a rendszer rákérdez.
 
+**Kvíz feltöltése JSON-ből:** a kiválasztott tantárgyhoz egy kvíz-JSON fájl (4.2) feltölthető. A kvíz a fájlban megadott szintre kerül, a kiválasztott tantárgyhoz (a fájl `subject` mezőjétől függetlenül). Ugyanaz az ellenőrzés fut, mint mentéskor; hibás vagy nem kvíz-JSON fájlnál semmi nem íródik, és a hiba oka megjelenik. Ha a szint foglalt, a rendszer rákérdez a felülírásra.
+
 **Párhuzamos szerkesztés:** nincs zárolás; ha ketten mentik ugyanazt a kvízt, az utolsó mentés marad meg.
 
 ### 4.2. Egységes kvíz-JSON
@@ -143,11 +145,16 @@ Minden tantárgy mappájában van egy `subject.json`, amely a tantárgy adatait 
   - Automatikus továbblépés igen/nem
 - Tantárgy létrehozása: megjelenített név és kulcs megadásával. A kulcs csak kisbetűt (a–z), számjegyet (0–9) és `-` jelet tartalmazhat, egyedi, és később nem változtatható. Tantárgy átnevezése és törlése nincs az MVP-ben.
 - **Adatok letöltése:** a teljes `/data` mappa letölthető ZIP-fájlként (kézi biztonsági mentés).
+- **Kvízek feltöltése ZIP-ben:** egy ZIP-fájllal több kvíz tölthető fel egyszerre. A ZIP a `Quizzes/` szerkezetét követi (`<subject>/<difficulty>.json`, opcionálisan `<subject>/subject.json`), a gyökérben vagy egy `Quizzes/` mappában; így az „Adatok letöltése” ZIP-je is visszatölthető (az eredményeket a feltöltés figyelmen kívül hagyja).
+  - Még nem létező tantárgy a ZIP-ben lévő `subject.json` alapján jön létre; ha az hiányzik vagy hibás, a feltöltés hibát jelez. Létező tantárgy beállításai nem változnak.
+  - Minden kvíz ugyanazon az ellenőrzésen megy át, mint mentéskor. Ha bármelyik fájl hibás, semmi nem íródik, és fájlonként megjelenik a hiba oka.
+  - Ha egy vagy több szint foglalt, a rendszer felsorolja őket (tantárgy, szint, a meglévő kvíz neve), és megerősítés után felülírja.
+- **Átvétel a forrásból:** egy gombnyomással a repó `Quizzes/` mappájából (élesben: az alkalmazással együtt telepített példányából) átmásolódnak azok a kvízek és tantárgyak, amelyek még nincsenek a `/data/Quizzes`-ben. Meglévő kvízt és tantárgy-beállítást nem ír felül. A végén megjelenik, mi került át (vagy hogy nem volt új).
 
 ### 6.2. Eredmények és összesítés
 
 - Személyt kell választani.
-- Eredménylista: a kiválasztott személy **10 legutóbbi** eredménye, tantárgytól függetlenül, a legújabb elöl. Oszlopok: tantárgy, kitöltési időpont, teljesítési %, sikeres-e (100%).
+- Eredménylista: a kiválasztott személy **10 legutóbbi** eredménye, tantárgytól függetlenül, a legújabb elöl. Oszlopok: tantárgy, kitöltési időpont, teljesítési %, sikeres-e (100%). A tantárgy mellett a kitöltött szinttartomány áll (pl. *Történelem · 3–5. szint*, egyetlen szintnél *3. szint*), alatta a kezdő és a záró szint kvízének neve (pl. *Ókor – Középkor*, egyetlen szintnél egy név). A nevek a kitöltéskori állapotot mutatják, akkor is, ha a kvízt azóta átnevezték vagy törölték; a nevek nélküli régi eredményeknél csak a tartomány látszik.
 - Egy sorra kattintva az eredmény összes adata megjelenik.
 
 #### 6.2.1. Eredmény tárolási formátum
@@ -157,6 +164,7 @@ Minden tantárgy mappájában van egy `subject.json`, amely a tantárgy adatait 
 - Az eredmény csak **összesítő adatokat** tartalmaz; kérdésenkénti válasznapló nem szükséges.
 - A `total` a kiválasztott kérdések száma, akkor is, ha lejárt az idő.
 - Az `elapsedSeconds` a kezdéstől az utolsó blokk kiértékeléséig eltelt idő; ha lejárt az idő, megegyezik a `timeLimitSeconds` értékével.
+- A `quizNameFrom` és a `quizNameTo` a `difficultyFrom`, illetve a `difficultyTo` szint kvízének neve a kitöltés pillanatában. Régebbi eredményekből hiányozhatnak.
 
 **Közös eredményséma:**
 
@@ -168,6 +176,8 @@ Minden tantárgy mappájában van egy `subject.json`, amely a tantárgy adatait 
   "subject": "history",
   "difficultyFrom": 1,
   "difficultyTo": 5,
+  "quizNameFrom": "Ókor",
+  "quizNameTo": "Középkor",
   "total": 20,
   "correct": 17,
   "incorrect": 3,
@@ -210,7 +220,7 @@ A React nem írhat közvetlenül a Railway Volume-ra: a fájlműveleteket a back
     <result-id>.json
 ```
 
-**Kezdeti adatok:** induláskor, ha a `/data/Quizzes` üres, az alkalmazás egyszer átmásolja a repó `Quizzes/` mappáját. Később soha nem írja felül.
+**Kezdeti adatok:** induláskor, ha a `/data/Quizzes` üres, az alkalmazás egyszer átmásolja a repó `Quizzes/` mappáját. Később soha nem írja felül. A repóba később került új kvízek a Beállítások „Átvétel a forrásból” gombjával vehetők át (6.1); ez is csak a hiányzókat másolja.
 
 ### 7.2. Biztonság és üzemeltetés
 

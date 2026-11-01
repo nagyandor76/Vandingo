@@ -17,7 +17,7 @@ Egy mobilbarát webalkalmazás négy belépési ponttal:
 - **Kitöltés:** a Participant kiválaszt egy Subjectet és egy Difficulty-tartományt, és egy Practice-t tölt ki. A Practice Blockokból áll (3 igaz–hamis állítás vagy 5 szópár), egy közös visszaszámlálóval, Blockonkénti kiértékeléssel és hangjelzéssel, angol szavak és állítások felolvasásával.
 - **Szerkesztő mód:** számítógépen, egyetlen gridben szerkeszthető egy Quiz összes Questionje, Excelből beilleszthetően, típusonkénti ellenőrzéssel.
 - **Eredmény böngésző:** egy Participant 10 legutóbbi Resultja, részletekkel.
-- **Beállítások:** Subject létrehozása, Subjectenkénti beállítások, az összes adat letöltése ZIP-ben.
+- **Beállítások:** Subject létrehozása, Subjectenkénti beállítások, az összes adat letöltése ZIP-ben, Quizek feltöltése ZIP-ben, új Quizek átvétele a repóból.
 
 Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanazokat a Quizeket és Resultokat látja.
 
@@ -100,11 +100,14 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 52. Mint szülő, új Quiz mentésekor foglalt szint esetén felülírási kérdést akarok kapni.
 53. Mint szülő, egy teljes Quizt törölni akarok, megerősítés után.
 54. Mint szülő, mind a négy kérdéstípust szerkeszteni és menteni akarom, akkor is, ha a Practice még csak kettőt használ.
+67. Mint szülő, a kiválasztott Subjecthez egy Quiz-JSON fájlt akarok feltölteni, amely a fájlban megadott Difficultyre kerül, hogy a máshol elkészített Quizt ne kelljen újra begépelnem.
+68. Mint szülő, ha a feltöltött fájl hibás, a hiba okát akarom látni, és nem akarom, hogy bármi mentődjön; ha a szint foglalt, a rendszer kérdezzen rá a felülírásra.
 
 ### Eredmény böngésző
 
 55. Mint szülő, ki akarom választani egy Participantot, és látni akarom a 10 legutóbbi Resultját, a legújabbal kezdve, tantárgytól függetlenül.
-56. Mint szülő, a listában látni akarom a Subjectet, az időpontot, a százalékot, és hogy Passed-e.
+56. Mint szülő, a listában látni akarom a Subjectet a kitöltött Difficulty-tartománnyal, az időpontot, a százalékot, és hogy Passed-e.
+66. Mint szülő, a lista soraiban a Subject alatt a kezdő és a záró szint Quizének nevét akarom látni, a kitöltéskori állapot szerint, hogy tudjam, milyen anyagot gyakorolt a gyerek.
 57. Mint szülő, egy sorra koppintva látni akarom a Result összes adatát (tartomány, helyes/hibás, időkeret, felhasznált idő).
 
 ### Beállítások
@@ -114,12 +117,15 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 60. Mint szülő, Subjectenként be akarom állítani a Practice maximális kérdésszámát (alapértelmezés: 20).
 61. Mint szülő, Subjectenként be akarom kapcsolni az automatikus továbblépést.
 62. Mint szülő, az összes adatot egy ZIP-fájlban le akarom tölteni biztonsági mentésként.
+69. Mint szülő, egy ZIP-fájlban több Quizt akarok egyszerre feltölteni, akár új Subjectekkel együtt, és a letöltött biztonsági mentés ZIP-jét is vissza akarom tudni tölteni.
+70. Mint szülő, ha a ZIP-ben bármelyik fájl hibás, fájlonként a hiba okát akarom látni, és nem akarom, hogy bármi mentődjön; ha szintek foglaltak, a rendszer sorolja fel őket, és megerősítés után írja felül.
 
 ### Üzemeltetés
 
 63. Mint szülő, azt akarom, hogy az első indításkor a repóban lévő Quizek bekerüljenek a tárhelyre, hogy rögtön legyen mit gyakorolni.
 64. Mint szülő, azt akarom, hogy a későbbi indítások ne írják felül a szerkesztett Quizeket.
 65. Mint szülő, azt akarom, hogy minden eszköz ugyanazokat a Quizeket és Resultokat lássa.
+71. Mint szülő, a repóba később került új Quizeket és Subjecteket egy gombnyomással át akarom venni a tárhelyre, úgy, hogy a már meglévő, szerkesztett Quizek és a Subject-beállítások ne íródjanak felül, és lássam, mi került át.
 
 ## Implementation Decisions
 
@@ -133,7 +139,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 
 - **Quiz-fájl** Subjectenként és Difficultyként egy, a Difficulty a fájlnév. Mezők: `name`, `subject`, `difficulty`, `default_time`, `questions` (legalább 5 Question). Question mezők: `type`, `text`, `options`, `answer`, `time`, `speak_text`, `speak_answer` – részletek a specifikáció 4.2 pontjában.
 - **Subject-fájl** Subjectenként egy, a Subject mappájában: `key`, `name`, `max_questions`, `auto_advance`.
-- **Result-fájl** Practice-enként egy: `id`, `completedAt`, `participant`, `subject`, `difficultyFrom`, `difficultyTo`, `total`, `correct`, `incorrect`, `scorePercent`, `timeLimitSeconds`, `elapsedSeconds`.
+- **Result-fájl** Practice-enként egy: `id`, `completedAt`, `participant`, `subject`, `difficultyFrom`, `difficultyTo`, `total`, `correct`, `incorrect`, `scorePercent`, `timeLimitSeconds`, `elapsedSeconds`, valamint a kitöltéskori Quiz-nevek: `quizNameFrom`, `quizNameTo`. Ez utóbbi kettőt a felület tölti ki a szintválasztóban látott Quiz-listából; a régebbi Resultokból hiányoznak, ilyenkor csak a tartomány látszik.
 - A Quiz- és Subject-fájlok snake_case, a Result-fájl camelCase kulcsokat használ; ez a meglévő mintafájlokból örökölt eltérés, amelyet a szerver szerializációja típusonként kezel.
 
 ### Backend modulok
@@ -142,6 +148,8 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 - **Ellenőrzés:** a Quiz mentése előtt ellenőrzi, hogy legalább 5 Questiont tartalmaz, és minden Questiont a típusa szabályai szerint ellenőriz; hibánál soronkénti hibalistát ad vissza (sor indexe, mező, üzenet; a Questionök számára vonatkozó hibánál sor index nélkül), és nem ír semmit. A Subject kulcsát a szabály szerint ellenőrzi.
 - **Kezdeti adatok:** induláskor, ha az adatkönyvtár Quiz-része üres, egyszer átmásolja a repó Quiz-mappáját.
 - **Export:** a teljes adatkönyvtár ZIP-ként.
+- **Import:** Quizek (és új Subjectek) beolvasása egy ZIP-ből. Előbb mindent ellenőriz (Quiz-ellenőrzés fájlonként, új Subjectnél a `subject.json`), és csak akkor ír, ha minden rendben van, és nincs megerősítetlen foglalt szint.
+- **Átvétel a forrásból:** a kezdeti adatok forrásmappájából azokat a Quiz- és Subject-fájlokat másolja, amelyek az adatkönyvtárban még nincsenek; meglévőt nem ír felül.
 
 ### API-szerződés
 
@@ -159,6 +167,9 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 | Resultok listája | `GET /api/results?participant=&limit=` | a legújabb elöl |
 | Result részletei | `GET /api/results/{id}` | |
 | Export | `GET /api/export` | ZIP |
+| Quiz feltöltése JSON-ből | – | a felület beolvassa a fájlt, és a Quiz mentése végpontot hívja a fájlban lévő Difficultyvel; a 409 és a 400 ugyanúgy kezelődik, mint a szerkesztőben |
+| Quizek feltöltése ZIP-ben | `POST /api/import` | a ZIP a kérés törzsében; opcionális felülírási jelző; hibás fájl: 400 fájlonkénti hibalistával; foglalt szint felülírási jelző nélkül: 409 a foglalt szintek listájával (Subject, Difficulty, meglévő név); egyik hibánál sem ír semmit; siker: a feltöltött Quizek és új Subjectek listája |
+| Átvétel a forrásból | `POST /api/seed` | az átmásolt Quizek és Subjectek listája (üres, ha nem volt új) |
 
 ### Frontend modulok
 
@@ -170,7 +181,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 ## Testing Decisions
 
 - **Jó teszt:** csak külső viselkedést ellenőriz a tesztelési ponton keresztül (kérés → válasz és létrejött fájlok; művelet → állapot), belső függvényeket és implementációs részleteket nem. Egy refaktorálás ne törjön el tesztet, ha a viselkedés nem változott.
-- **1. tesztelési pont – backend HTTP API:** a teljes alkalmazás memóriában fut egy ideiglenes adatkönyvtárral; a tesztek HTTP-kéréseket küldenek, és a válaszokat, valamint az adatkönyvtár tartalmát ellenőrzik. Lefedi: Quiz mentés/betöltés/törlés/áthelyezés és felülírási ütközés, típusonkénti ellenőrzés, Subject létrehozás és kulcsszabályok, Result mentés és listázás, kezdeti adatok átmásolása és nem felülírása, export.
+- **1. tesztelési pont – backend HTTP API:** a teljes alkalmazás memóriában fut egy ideiglenes adatkönyvtárral; a tesztek HTTP-kéréseket küldenek, és a válaszokat, valamint az adatkönyvtár tartalmát ellenőrzik. Lefedi: Quiz mentés/betöltés/törlés/áthelyezés és felülírási ütközés, típusonkénti ellenőrzés, Subject létrehozás és kulcsszabályok, Result mentés és listázás, kezdeti adatok átmásolása és nem felülírása, export, ZIP-import (hibás fájl, foglalt szint, új Subject, export visszatöltése), átvétel a forrásból (csak a hiányzók, meglévő nem íródik felül).
 - **2. tesztelési pont – Practice engine:** rögzített véletlenszám-forrással és vezérelt órával, determinisztikusan. Lefedi: kiválasztás és maximum, csak kitölthető típusok, teljes Blocknyi Question nélküli típusok kihagyása, ismétlődő szavak szűrése, legalább 2 pár Blockonként, Blockméretek, súlyozott típusválasztás, pontozás, félkész Block és időlejárat, `total` és `elapsedSeconds` számítása, a felolvasandó állítás kiválasztása.
 - **Nem tesztelünk automatikusan:** React-képernyők, hangok, felolvasás, AG Grid beillesztés. Ezeket kézzel ellenőrizzük telefonon és számítógépen.
 - **Előzmény:** a repóban még nincs kód és nincs teszt; ez a projekt első tesztkészlete.

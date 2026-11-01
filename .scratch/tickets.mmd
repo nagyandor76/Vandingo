@@ -7,12 +7,16 @@ flowchart LR
     vandingo_mvp_5["05: Felolvasás, hangjelzések, automatikus továbblépés<br/><small>done</small>"]:::done
     vandingo_mvp_6["06: Eredmény böngésző<br/><small>done</small>"]:::done
     vandingo_mvp_7["07: Szerkesztő – Quiz megnyitása, létrehozása és mentése<br/><small>done</small>"]:::done
-    vandingo_mvp_8["08: Szerkesztő – beillesztés Excelből<br/><small>ready-for-agent</small>"]:::ready_for_agent
-    vandingo_mvp_9["09: Szerkesztő – szint módosítása, felülírás, Quiz törlése<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_8["08: Szerkesztő – beillesztés Excelből<br/><small>done</small>"]:::done
+    vandingo_mvp_9["09: Szerkesztő – szint módosítása, felülírás, Quiz törlése<br/><small>done</small>"]:::done
     vandingo_mvp_10["10: Beállítások – Subject létrehozása és beállításai<br/><small>done</small>"]:::done
-    vandingo_mvp_11["11: Adatok letöltése ZIP-ben<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_11["11: Adatok letöltése ZIP-ben<br/><small>done</small>"]:::done
     vandingo_mvp_12["12: Telepítés Railway-re<br/><small>ready-for-human</small>"]:::ready_for_human
     vandingo_mvp_13["13: Design-alap – téma és közös képernyőkeret<br/><small>done</small>"]:::done
+    vandingo_mvp_14["14: Eredmény böngésző – szinttartomány és Quiz-nevek<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_15["15: Szerkesztő – Quiz feltöltése JSON-ből<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_16["16: Beállítások – Quizek feltöltése ZIP-ben<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_17["17: Beállítások – új Quizek átvétele a forrásból<br/><small>ready-for-agent</small>"]:::ready_for_agent
   end
   vandingo_mvp_1 --> vandingo_mvp_2
   vandingo_mvp_2 --> vandingo_mvp_3
@@ -26,6 +30,11 @@ flowchart LR
   vandingo_mvp_1 --> vandingo_mvp_11
   vandingo_mvp_1 --> vandingo_mvp_12
   vandingo_mvp_1 --> vandingo_mvp_13
+  vandingo_mvp_6 --> vandingo_mvp_14
+  vandingo_mvp_9 --> vandingo_mvp_15
+  vandingo_mvp_10 --> vandingo_mvp_16
+  vandingo_mvp_11 --> vandingo_mvp_16
+  vandingo_mvp_10 --> vandingo_mvp_17
   classDef done fill:#50e55c,stroke:#1f8a4c,color:#1f2933
   classDef ready_for_agent fill:#e0f2fe,stroke:#0ea5e9,color:#1f2933
   classDef ready_for_human fill:#fef3c7,stroke:#f59e0b,color:#1f2933
