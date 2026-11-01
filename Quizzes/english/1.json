@@ -1,0 +1,28 @@
+{
+  "name": "Angol-magyar szópárosítás 5. osztály",
+  "subject": "english",
+  "difficulty": 1,
+  "default_time": 14,
+  "questions": [
+    { "type": "word-matching", "text": "apple", "speak_text": "en-GB", "answer": ["alma"] },
+    { "type": "word-matching", "text": "dog", "speak_text": "en-GB", "answer": ["kutya"] },
+    { "type": "word-matching", "text": "cat", "speak_text": "en-GB", "answer": ["macska"] },
+    { "type": "word-matching", "text": "house", "speak_text": "en-GB", "answer": ["ház"] },
+    { "type": "word-matching", "text": "school", "speak_text": "en-GB", "answer": ["iskola"] },
+    { "type": "word-matching", "text": "book", "speak_text": "en-GB", "answer": ["könyv"] },
+    { "type": "word-matching", "text": "water", "speak_text": "en-GB", "answer": ["víz"] },
+    { "type": "word-matching", "text": "bread", "speak_text": "en-GB", "answer": ["kenyér"] },
+    { "type": "word-matching", "text": "friend", "speak_text": "en-GB", "answer": ["barát"] },
+    { "type": "word-matching", "text": "family", "speak_text": "en-GB", "answer": ["család"] },
+    { "type": "word-matching", "text": "teacher", "speak_text": "en-GB", "answer": ["tanár"] },
+    { "type": "word-matching", "text": "table", "speak_text": "en-GB", "answer": ["asztal"] },
+    { "type": "word-matching", "text": "chair", "speak_text": "en-GB", "answer": ["szék"] },
+    { "type": "word-matching", "text": "window", "speak_text": "en-GB", "answer": ["ablak"] },
+    { "type": "word-matching", "text": "tree", "speak_text": "en-GB", "answer": ["fa"] },
+    { "type": "word-matching", "text": "sun", "speak_text": "en-GB", "answer": ["nap"] },
+    { "type": "word-matching", "text": "red", "speak_text": "en-GB", "answer": ["piros"] },
+    { "type": "word-matching", "text": "blue", "speak_text": "en-GB", "answer": ["kék"] },
+    { "type": "word-matching", "text": "big", "speak_text": "en-GB", "answer": ["nagy"] },
+    { "type": "word-matching", "text": "happy", "speak_text": "en-GB", "answer": ["boldog"] }
+  ]
+}

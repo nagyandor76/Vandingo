@@ -1,0 +1,33 @@
+{
+  "name": "Az ókori Egyiptom 3. szint",
+  "subject": "history",
+  "difficulty": 3,
+  "default_time": 14,
+  "questions": [
+    {
+      "type": "true-false",
+      "text": "A gízai nagy piramis Egyiptomban áll.",
+      "answer": ["true"],
+      "time": 10
+    },
+    {
+      "type": "word-matching",
+      "text": "pyramid",
+      "speak_text": "en-GB",
+      "answer": ["piramis"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyek egyiptomi városok?",
+      "options": ["Théba", "Athén", "Memphisz", "Róma"],
+      "answer": ["Théba", "Memphisz"],
+      "speak_answer": "en-GB"
+    },
+    {
+      "type": "ordered",
+      "text": "Tedd időrendbe a helyes válaszokat!",
+      "options": ["Előbirodalom", "Óbirodalom", "Középbirodalom", "Újbirodalom" ],
+      "answer": ["Óbirodalom", "Középbirodalom", "Újbirodalom"]
+    }
+  ]
+}

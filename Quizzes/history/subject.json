@@ -1,0 +1,6 @@
+{
+  "key": "history",
+  "name": "Történelem",
+  "max_questions": 20,
+  "auto_advance": false
+}
