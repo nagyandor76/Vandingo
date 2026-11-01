@@ -115,11 +115,27 @@ export async function fetchQuiz(subject: string, difficulty: number): Promise<Qu
   return (await response.json()) as Quiz
 }
 
-/** Writes the Quiz to its Difficulty, after the server has checked it. */
+/**
+ * Writes the Quiz to its Difficulty, after the server has checked it. A Quiz moved from `originalDifficulty`
+ * no longer stays there. If another Quiz is at the Difficulty, it is a conflict unless `overwrite`.
+ */
 export const saveQuiz = (
   subject: string,
   difficulty: number,
   // A missing default time is sent as null, so the server's check reports it.
   quiz: Pick<Quiz, 'name' | 'questions'> & { default_time: number | null },
-) =>
-  send('PUT', `/api/subjects/${encodeURIComponent(subject)}/quizzes/${difficulty}`, quiz)
+  { originalDifficulty, overwrite = false }: { originalDifficulty?: number; overwrite?: boolean } = {},
+) => {
+  const query = new URLSearchParams()
+  if (originalDifficulty !== undefined) query.set('original_difficulty', String(originalDifficulty))
+  if (overwrite) query.set('overwrite', 'true')
+  const search = query.toString() ? `?${query}` : ''
+  return send('PUT', `/api/subjects/${encodeURIComponent(subject)}/quizzes/${difficulty}${search}`, quiz)
+}
+
+/** Removes the Quiz at this Difficulty. */
+export async function deleteQuiz(subject: string, difficulty: number): Promise<void> {
+  const path = `/api/subjects/${encodeURIComponent(subject)}/quizzes/${difficulty}`
+  const response = await fetch(path, { method: 'DELETE' })
+  if (!response.ok) throw new Error(`${path}: ${response.status}`)
+}

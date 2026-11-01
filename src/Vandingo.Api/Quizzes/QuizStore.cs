@@ -33,10 +33,14 @@ public sealed class QuizStore(DataPaths paths)
             ? JsonFile.Read<Quiz>(FileOf(subject, difficulty)) with { Difficulty = difficulty }
             : null;
 
-    /// <summary>Writes a checked Quiz to its Difficulty's file; false if there is no such Subject.</summary>
-    public bool Save(string subject, int difficulty, QuizDraft draft)
+    /// <summary>
+    /// Writes a checked Quiz to its Difficulty's file. A Quiz moved here from <paramref name="originalDifficulty"/>
+    /// no longer stays there. Another Quiz already at this Difficulty is replaced only if <paramref name="overwrite"/>.
+    /// </summary>
+    public SaveOutcome Save(string subject, int difficulty, QuizDraft draft, int? originalDifficulty, bool overwrite)
     {
-        if (!SubjectExists(subject)) return false;
+        if (!SubjectExists(subject)) return SaveOutcome.NoSuchSubject;
+        if (difficulty != originalDifficulty && File.Exists(FileOf(subject, difficulty)) && !overwrite) return SaveOutcome.Occupied;
 
         var questions = draft.Questions!.Select(question => question with
         {
@@ -46,6 +50,17 @@ public sealed class QuizStore(DataPaths paths)
             SpeakAnswer = string.IsNullOrWhiteSpace(question.SpeakAnswer) ? null : question.SpeakAnswer,
         }).ToList();
         JsonFile.Write(FileOf(subject, difficulty), new Quiz(draft.Name!.Trim(), subject, difficulty, draft.DefaultTime!.Value, questions));
+        if (originalDifficulty is { } original && original != difficulty) File.Delete(FileOf(subject, original));
+        return SaveOutcome.Saved;
+    }
+
+    public enum SaveOutcome { Saved, NoSuchSubject, Occupied }
+
+    /// <summary>Removes the Quiz at this Difficulty; false if there is none.</summary>
+    public bool Delete(string subject, int difficulty)
+    {
+        if (!SubjectExists(subject) || !File.Exists(FileOf(subject, difficulty))) return false;
+        File.Delete(FileOf(subject, difficulty));
         return true;
     }
 
