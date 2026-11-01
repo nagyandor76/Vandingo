@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
-import { createSubject, exportUrl, fetchSubjects, saveSubjectSettings, type Subject } from '../api.ts'
+import { createSubject, exportUrl, fetchSubjects, saveSubjectSettings, takeOverFromSource, type SeedItem, type Subject } from '../api.ts'
 import Screen from './Screen.tsx'
 import ZipUpload from './ZipUpload.tsx'
 
@@ -47,7 +47,61 @@ export default function Settings() {
         Quizek feltöltése
       </Typography>
       <ZipUpload onImported={load} />
+
+      <Typography variant="h3" component="h2" sx={{ pt: 1 }}>
+        Átvétel a forrásból
+      </Typography>
+      <TakeOver onDone={load} />
     </Screen>
+  )
+}
+
+/** Copies the Quizzes and Subjects missing from the data directory from the initial-data source. */
+function TakeOver({ onDone }: { onDone: () => void }) {
+  const [items, setItems] = useState<SeedItem[]>()
+  const [failed, setFailed] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const run = async () => {
+    setBusy(true)
+    setFailed(false)
+    try {
+      setItems(await takeOverFromSource())
+      onDone()
+    } catch {
+      setFailed(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Paper sx={{ p: 2 }}>
+      <Stack spacing={2}>
+        <Typography color="text.secondary">
+          A forrásban lévő, de még hiányzó kvízeket és tantárgyakat átmásolja. A meglévőket nem írja felül.
+        </Typography>
+        {failed && <Alert severity="error">Nem sikerült az átvétel.</Alert>}
+        {items?.length === 0 && <Alert severity="info">Nem volt új kvíz vagy tantárgy.</Alert>}
+        {items && items.length > 0 && (
+          <Alert severity="success">
+            Átvéve:
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {items.map((item) => (
+                <li key={`${item.subject}/${item.difficulty ?? 'subject'}`}>
+                  {item.difficulty === null
+                    ? `Új tantárgy: ${item.name} (${item.subject})`
+                    : `${item.subject}, ${item.difficulty}. szint: ${item.name}`}
+                </li>
+              ))}
+            </ul>
+          </Alert>
+        )}
+        <Button variant="outlined" disabled={busy} onClick={run}>
+          Átvétel a forrásból
+        </Button>
+      </Stack>
+    </Paper>
   )
 }
 

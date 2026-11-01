@@ -45,6 +45,72 @@ public class ResultApiTests
     }
 
     [Fact]
+    public async Task A_Result_with_Quiz_names_gives_them_back_in_the_file_the_list_and_the_details()
+    {
+        using var app = new VandingoApp();
+        var client = app.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/results", new
+        {
+            participant = "Janka",
+            subject = "history",
+            difficultyFrom = 3,
+            difficultyTo = 5,
+            quizNameFrom = "Ókor",
+            quizNameTo = "Középkor",
+            total = 20,
+            correct = 17,
+            incorrect = 3,
+            scorePercent = 85,
+            timeLimitSeconds = 200,
+            elapsedSeconds = 156,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var id = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var file = JsonSerializer.Deserialize<JsonElement>(app.ReadData($"results/{id}.json"));
+        Assert.Equal("Ókor", file.GetProperty("quizNameFrom").GetString());
+        Assert.Equal("Középkor", file.GetProperty("quizNameTo").GetString());
+
+        var details = await client.GetFromJsonAsync<JsonElement>($"/api/results/{id}");
+        Assert.Equal("Ókor", details.GetProperty("quizNameFrom").GetString());
+        Assert.Equal("Középkor", details.GetProperty("quizNameTo").GetString());
+
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/results?participant=Janka&limit=10");
+        Assert.Equal("Ókor", list[0].GetProperty("quizNameFrom").GetString());
+        Assert.Equal("Középkor", list[0].GetProperty("quizNameTo").GetString());
+    }
+
+    [Fact]
+    public async Task A_Result_without_Quiz_names_can_still_be_saved_and_listed()
+    {
+        using var app = new VandingoApp();
+        var client = app.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/results", new
+        {
+            participant = "Janka",
+            subject = "history",
+            difficultyFrom = 1,
+            difficultyTo = 1,
+            total = 4,
+            correct = 4,
+            incorrect = 0,
+            scorePercent = 100,
+            timeLimitSeconds = 60,
+            elapsedSeconds = 30,
+        });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        app.WriteData("results/old.json", StoredResult("old", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/results?participant=Janka&limit=10");
+
+        Assert.Equal(2, list.GetArrayLength());
+        Assert.All(list.EnumerateArray(), result => Assert.False(result.TryGetProperty("quizNameFrom", out var name) && name.ValueKind != JsonValueKind.Null));
+    }
+
+    [Fact]
     public async Task Result_list_gives_only_the_Participants_Results_newest_first_up_to_the_limit()
     {
         using var app = new VandingoApp();

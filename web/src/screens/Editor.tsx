@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router'
 import { Alert, Box, Button, ButtonBase, CircularProgress, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material'
-import { fetchQuizzes, fetchSubjects, type QuizSummary, type Subject } from '../api.ts'
+import { fetchQuizzes, fetchSubjects, saveQuiz, type QuizSummary, type Subject, type ValidationError } from '../api.ts'
+import { readQuizFile } from '../editor/upload.ts'
+import ConfirmDialog from './ConfirmDialog.tsx'
 import Screen from './Screen.tsx'
 
 const difficulties = Array.from({ length: 20 }, (_, i) => i + 1)
@@ -10,6 +12,17 @@ const difficulties = Array.from({ length: 20 }, (_, i) => i + 1)
 export interface NewQuizState {
   newQuizName: string
 }
+
+type UploadedQuiz = Extract<ReturnType<typeof readQuizFile>, { ok: true }>
+
+type UploadResult =
+  | { status: 'saved'; name: string; difficulty: number }
+  | { status: 'refused'; message: string }
+  | { status: 'invalid'; errors: ValidationError[] }
+  | { status: 'failed' }
+
+/** Field names the server reports, as the labels the user sees. */
+const fieldLabels: Record<string, string> = { name: 'Név', default_time: 'Alapidő', difficulty: 'Szint', questions: 'Kérdések' }
 
 /** Picks the Subject, then opens one of its Quizzes or starts a new one. The Subject is kept in the URL. */
 export default function Editor() {
@@ -22,6 +35,10 @@ export default function Editor() {
   const [quizzesFailedFor, setQuizzesFailedFor] = useState<string>()
   const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState<number | ''>('')
+  const fileInput = useRef<HTMLInputElement>(null)
+  // An uploaded Quiz waiting for the user to confirm replacing the one at its Difficulty.
+  const [pendingUpload, setPendingUpload] = useState<UploadedQuiz>()
+  const [uploadResult, setUploadResult] = useState<UploadResult>()
 
   useEffect(() => {
     fetchSubjects().then(setSubjects, () => setSubjectsError(true))
@@ -42,6 +59,41 @@ export default function Editor() {
   const list = quizzes?.subject === subject ? quizzes.list : undefined
   const quizzesError = quizzesFailedFor === subject
   const freeDifficulties = difficulties.filter((d) => !list?.some((quiz) => quiz.difficulty === d))
+
+  /** Saves the uploaded Quiz at its own Difficulty in the selected Subject; a Quiz already there is replaced only with `overwrite`. */
+  const save = async (upload: UploadedQuiz, overwrite: boolean) => {
+    setPendingUpload(undefined)
+    try {
+      const outcome = await saveQuiz(subject, upload.difficulty, upload.quiz, { overwrite })
+      if (outcome.status === 'saved') {
+        setUploadResult({ status: 'saved', name: upload.quiz.name ?? '', difficulty: upload.difficulty })
+        setQuizzes({ subject, list: await fetchQuizzes(subject) })
+      } else if (outcome.status === 'conflict') {
+        setPendingUpload(upload)
+      } else {
+        setUploadResult({ status: 'invalid', errors: outcome.errors })
+      }
+    } catch {
+      setUploadResult({ status: 'failed' })
+    }
+  }
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return
+    setUploadResult(undefined)
+    let text: string
+    try {
+      text = await file.text()
+    } catch {
+      setUploadResult({ status: 'refused', message: 'A fájlt nem sikerült beolvasni.' })
+      return
+    }
+    const read = readQuizFile(text)
+    if (read.ok) await save(read, false)
+    else setUploadResult({ status: 'refused', message: read.message })
+  }
+
+  const occupant = list?.find((quiz) => quiz.difficulty === pendingUpload?.difficulty)
 
   const create = () => {
     const state: NewQuizState = { newQuizName: name.trim() }
@@ -78,6 +130,41 @@ export default function Editor() {
           <Typography variant="h3" component="h2">
             Kvíz megnyitása
           </Typography>
+          <Box>
+            <Button variant="outlined" onClick={() => fileInput.current?.click()}>
+              Feltöltés JSON-ből
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept=".json,application/json"
+              hidden
+              onChange={(event) => {
+                void upload(event.target.files?.[0])
+                // The same file can be chosen again.
+                event.target.value = ''
+              }}
+            />
+          </Box>
+          {uploadResult?.status === 'saved' && (
+            <Alert severity="success">
+              Feltöltve: {uploadResult.difficulty}. szint – {uploadResult.name}.
+            </Alert>
+          )}
+          {uploadResult?.status === 'refused' && <Alert severity="error">{uploadResult.message}</Alert>}
+          {uploadResult?.status === 'failed' && <Alert severity="error">Nem sikerült feltölteni.</Alert>}
+          {uploadResult?.status === 'invalid' && (
+            <Alert severity="error">
+              A fájl hibás, semmi nem mentődött:
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {uploadResult.errors.map((error, i) => (
+                  <li key={i}>
+                    {error.row !== undefined ? `${error.row + 1}. sor` : (fieldLabels[error.field] ?? error.field)}: {error.message}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
           {list.length === 0 && <Alert severity="info">Ebben a tantárgyban még nincs kvíz.</Alert>}
           {list.length > 0 && (
             <Paper sx={{ overflow: 'hidden' }}>
@@ -136,6 +223,15 @@ export default function Editor() {
           </Paper>
         </>
       )}
+      <ConfirmDialog
+        open={pendingUpload !== undefined}
+        title="Foglalt szint"
+        confirmLabel="Felülírás"
+        onConfirm={() => pendingUpload && save(pendingUpload, true)}
+        onCancel={() => setPendingUpload(undefined)}
+      >
+        A(z) {pendingUpload?.difficulty}. szinten már van kvíz{occupant && <>: „{occupant.name}”</>}. Felülírod? A régi kvíz elvész.
+      </ConfirmDialog>
     </Screen>
   )
 }

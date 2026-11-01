@@ -38,6 +38,9 @@ export interface NewResult extends PracticeResult {
   subject: string
   difficultyFrom: number
   difficultyTo: number
+  /** The Quiz names at completion; Results from before they were recorded have none. */
+  quizNameFrom?: string
+  quizNameTo?: string
 }
 
 export async function saveResult(result: NewResult): Promise<void> {
@@ -96,6 +99,20 @@ export const saveSubjectSettings = (key: string, settings: Pick<Subject, 'max_qu
 /** Downloads the whole data directory as a dated ZIP (a plain link, so it works on every device). */
 export const exportUrl = '/api/export'
 
+/** A Quiz or Subject taken over from the source; `difficulty` is null for a Subject. */
+export interface SeedItem {
+  subject: string
+  difficulty: number | null
+  name: string
+}
+
+/** Copies the Quizzes and Subjects the data directory lacks from the initial-data source. */
+export async function takeOverFromSource(): Promise<SeedItem[]> {
+  const response = await fetch('/api/seed', { method: 'POST' })
+  if (!response.ok) throw new Error(`/api/seed: ${response.status}`)
+  return (await response.json()) as SeedItem[]
+}
+
 /** A Question as stored in its Quiz: `time` is missing when the Quiz default applies. */
 export interface Question extends Omit<PracticeQuestion, 'time'> {
   time?: number
@@ -125,8 +142,8 @@ export async function fetchQuiz(subject: string, difficulty: number): Promise<Qu
 export const saveQuiz = (
   subject: string,
   difficulty: number,
-  // A missing default time is sent as null, so the server's check reports it.
-  quiz: Pick<Quiz, 'name' | 'questions'> & { default_time: number | null },
+  // A missing name or default time is sent as null, so the server's check reports it.
+  quiz: Pick<Quiz, 'questions'> & { name: string | null; default_time: number | null },
   { originalDifficulty, overwrite = false }: { originalDifficulty?: number; overwrite?: boolean } = {},
 ) => {
   const query = new URLSearchParams()

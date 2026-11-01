@@ -101,6 +101,27 @@ public class QuizApiTests
     }
 
     [Fact]
+    public async Task An_uploaded_Quiz_file_is_saved_to_the_chosen_Subject_and_the_path_Difficulty_whatever_its_own_subject_and_difficulty_say()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+        // The whole file as the Editor sends it after reading it: with its own `subject` and `difficulty`.
+        var file = ValidQuiz();
+        file["subject"] = "geography";
+        file["difficulty"] = 3;
+
+        var response = await client.PutAsJsonAsync("/api/subjects/history/quizzes/12", file);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var saved = JsonSerializer.Deserialize<JsonElement>(app.ReadData("Quizzes/history/12.json"));
+        Assert.Equal("history", saved.GetProperty("subject").GetString());
+        Assert.Equal(12, saved.GetProperty("difficulty").GetInt32());
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes/history/3.json")));
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes/geography/3.json")));
+    }
+
+    [Fact]
     public async Task A_Quiz_of_fewer_than_5_Questions_is_rejected_as_a_whole_and_not_written()
     {
         using var app = new VandingoApp();
