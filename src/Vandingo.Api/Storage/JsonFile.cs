@@ -19,11 +19,14 @@ public static class JsonFile
     /// Writes to a temporary file first and then moves it into place,
     /// so an interrupted write never leaves a broken file.
     /// </summary>
-    public static void Write<T>(string file, T value)
+    public static void Write<T>(string file, T value) => WriteText(file, JsonSerializer.Serialize(value, Options));
+
+    /// <summary>The same atomic write for text that is already JSON (e.g. a file taken over as it is).</summary>
+    public static void WriteText(string file, string json)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         var temporary = file + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(value, Options));
+        File.WriteAllText(temporary, json);
         File.Move(temporary, file, overwrite: true);
     }
 }

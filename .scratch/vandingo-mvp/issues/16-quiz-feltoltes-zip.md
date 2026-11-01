@@ -15,10 +15,10 @@ Spec: [../spec.md](../spec.md) – User Stories 69–70
 - Foglalt szintnél felülírási jelző nélkül 409 jön, a foglalt szintek listájával (Subject, Difficulty, meglévő név), és semmi nem íródik. A felület felsorolja ezeket, és megerősítés után felülírási jelzővel küldi újra.
 - Siker esetén a felület kiírja, mely Quizek és új Subjectek kerültek be.
 
-- [ ] API-teszt: érvényes ZIP után az összes Quiz betölthető, és megjelenik a listában
-- [ ] API-teszt: ismeretlen Subject `subject.json`-nel létrejön; `subject.json` nélkül 400, és semmi nem íródik
-- [ ] API-teszt: egyetlen hibás Quiz-fájl miatt 400 fájlonkénti hibalistával, és egyik Quiz sem íródik
-- [ ] API-teszt: foglalt szint felülírási jelző nélkül 409 a foglalt szintek listájával, és semmi nem változik; jelzővel felülíródik
-- [ ] API-teszt: az `GET /api/export` ZIP-je visszatölthető, és a Resultokat nem érinti
-- [ ] API-teszt: létező Subject beállításai a ZIP `subject.json`-je ellenére sem változnak
-- [ ] A felület mutatja a hibákat, rákérdez a felülírásra, és a végén összesít
+- [x] API-teszt: érvényes ZIP után az összes Quiz betölthető, és megjelenik a listában
+- [x] API-teszt: ismeretlen Subject `subject.json`-nel létrejön; `subject.json` nélkül 400, és semmi nem íródik
+- [x] API-teszt: egyetlen hibás Quiz-fájl miatt 400 fájlonkénti hibalistával, és egyik Quiz sem íródik
+- [x] API-teszt: foglalt szint felülírási jelző nélkül 409 a foglalt szintek listájával, és semmi nem változik; jelzővel felülíródik
+- [x] API-teszt: az `GET /api/export` ZIP-je visszatölthető, és a Resultokat nem érinti
+- [x] API-teszt: létező Subject beállításai a ZIP `subject.json`-je ellenére sem változnak
+- [x] A felület mutatja a hibákat, rákérdez a felülírásra, és a végén összesít
