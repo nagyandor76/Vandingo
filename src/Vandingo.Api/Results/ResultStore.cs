@@ -14,6 +14,8 @@ public sealed class ResultStore(DataPaths paths)
             result.Subject,
             result.DifficultyFrom,
             result.DifficultyTo,
+            result.QuizNameFrom,
+            result.QuizNameTo,
             result.Total,
             result.Correct,
             result.Incorrect,

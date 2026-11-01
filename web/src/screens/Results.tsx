@@ -4,6 +4,7 @@ import { Alert, Box, ButtonBase, CircularProgress, Paper, Stack, Typography } fr
 import { fetchResult, fetchResults, fetchSubjects, type Result, type Subject } from '../api.ts'
 import { formatTime } from '../format.ts'
 import { participants, type Participant } from '../participants.ts'
+import { namesLabel, rangeLabel } from '../resultLabels.ts'
 import { isPassed } from '../practice/engine.ts'
 import ParticipantPicker from './ParticipantPicker.tsx'
 import Screen from './Screen.tsx'
@@ -58,6 +59,7 @@ export function ResultList() {
         <Paper sx={{ overflow: 'hidden' }}>
           {list.map((result, i) => {
             const passed = isPassed(result)
+            const names = namesLabel(result.quizNameFrom, result.quizNameTo)
             return (
               <ButtonBase
                 key={result.id}
@@ -69,7 +71,14 @@ export function ResultList() {
                 }}
               >
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600 }}>{subjectName(result.subject)}</Typography>
+                  <Typography noWrap sx={{ fontWeight: 600 }}>
+                    {subjectName(result.subject)} · {rangeLabel(result.difficultyFrom, result.difficultyTo)}
+                  </Typography>
+                  {names && (
+                    <Typography variant="body2" noWrap color="text.secondary">
+                      {names}
+                    </Typography>
+                  )}
                   <Typography variant="caption" component="p" color="text.secondary">
                     {formatDate(result.completedAt)}
                   </Typography>
@@ -119,14 +128,13 @@ export function ResultDetails() {
   }
 
   const passed = isPassed(result)
-  const range = result.difficultyFrom === result.difficultyTo
-    ? `${result.difficultyFrom}. szint`
-    : `${result.difficultyFrom}–${result.difficultyTo}. szint`
+  const names = namesLabel(result.quizNameFrom, result.quizNameTo)
   const rows: [string, string][] = [
     ['Kitöltő', result.participant],
     ['Tantárgy', subjectName(result.subject)],
     ['Időpont', formatDate(result.completedAt)],
-    ['Tartomány', range],
+    ['Tartomány', rangeLabel(result.difficultyFrom, result.difficultyTo)],
+    ...(names ? [['Quiz', names] as [string, string]] : []),
     ['Kérdések', String(result.total)],
     ['Helyes', String(result.correct)],
     ['Hibás', String(result.incorrect)],
