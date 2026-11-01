@@ -9,6 +9,8 @@ public sealed record DataPaths(string DataDirectory, string SeedDirectory)
 {
     public string QuizzesDirectory => Path.Combine(DataDirectory, "Quizzes");
 
+    public string ResultsDirectory => Path.Combine(DataDirectory, "results");
+
     public static DataPaths FromConfiguration(IConfiguration configuration, string contentRoot)
     {
         var data = configuration["Vandingo:DataDirectory"] ?? "/data";

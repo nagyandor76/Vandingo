@@ -6,14 +6,18 @@ Spec: [../spec.md](../spec.md) – User Stories 10–13, 17–22, 36, 38–40
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Practice engine-teszt: a kiválasztás tiszteletben tartja a maximumot, és kevesebb Question esetén az összeset adja
-- [ ] Practice engine-teszt: csak kitölthető típusok kerülnek be, és csak azok, amelyekből a tartományban legalább egy teljes Blocknyi van (a `usableTypes` szabálya)
-- [ ] Practice engine-teszt: 3 állításos Blockok, az utolsó lehet rövidebb
-- [ ] Practice engine-teszt: megválaszolatlan állítás hibásnak számít
-- [ ] Practice engine-teszt: időlejáratkor az aktuális Block kiértékelődik, a meg nem jelent Questionök hibásak, `total` a kiválasztott Questionök száma, `elapsedSeconds` = `timeLimitSeconds`
-- [ ] Practice engine-teszt: normál befejezésnél `elapsedSeconds` a ténylegesen eltelt idő
-- [ ] API-teszt: a Result elmentődik külön fájlba, és visszaolvasható
-- [ ] Nincs visszalépés, lezárt válasz nem módosítható
-- [ ] Az összesítő képernyő mutatja a Passed állapotot (100%)
+- [x] Practice engine-teszt: a kiválasztás tiszteletben tartja a maximumot, és kevesebb Question esetén az összeset adja
+- [x] Practice engine-teszt: csak kitölthető típusok kerülnek be, és csak azok, amelyekből a tartományban legalább egy teljes Blocknyi van (a `usableTypes` szabálya)
+- [x] Practice engine-teszt: 3 állításos Blockok, az utolsó lehet rövidebb
+- [x] Practice engine-teszt: megválaszolatlan állítás hibásnak számít
+- [x] Practice engine-teszt: időlejáratkor az aktuális Block kiértékelődik, a meg nem jelent Questionök hibásak, `total` a kiválasztott Questionök száma, `elapsedSeconds` = `timeLimitSeconds`
+- [x] Practice engine-teszt: normál befejezésnél `elapsedSeconds` a ténylegesen eltelt idő
+- [x] API-teszt: a Result elmentődik külön fájlba, és visszaolvasható
+- [x] Nincs visszalépés, lezárt válasz nem módosítható
+- [x] Az összesítő képernyő mutatja a Passed állapotot (100%)
+
+## Comments
+
+- 2026-11-01: Elkészült. A Practice engine tiszta függvényekből áll (`startPractice`, `answer`, `closeBlock`, `tick`, `next`), mindegyik a teljes állapotot adja vissza. A `scorePercent` lefelé kerekít, így 100% csak hibátlan Practice-nél jelenik meg (Passed, `isPassed`); 2/3 = 66%. A Resultot a szerver kapja meg `POST /api/results`-szal, az `id`-t és a `completedAt`-et (UTC) a szerver adja; `GET /api/results/{id}` visszaolvassa. Csak szópárosítós tartománynál a képernyő jelzi, hogy ez még nem érhető el (04). A képernyőket telefonon még kézzel ki kell próbálni.
