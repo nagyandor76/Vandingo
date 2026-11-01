@@ -6,12 +6,12 @@ Spec: [../spec.md](../spec.md)
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Egy paranccsal elindul helyben, és a böngészőben megjelenik a kezdőképernyő a négy gombbal
-- [ ] A felület magyar, telefonon is használható
-- [ ] A Subjectek listája a Subject-fájlokból jön, a megjelenített nevükkel
-- [ ] API-teszt: üres adatkönyvtárnál induláskor átmásolódnak a kezdeti Quizek és Subjectek
-- [ ] API-teszt: nem üres adatkönyvtárnál semmi nem íródik felül
-- [ ] A Practice engine tesztkészlete fut, legalább egy teszttel
-- [ ] Az összes teszt egy-egy paranccsal futtatható, és a parancsok le vannak írva az AGENTS.md-ben
+- [x] Egy paranccsal elindul helyben, és a böngészőben megjelenik a kezdőképernyő a négy gombbal
+- [x] A felület magyar, telefonon is használható
+- [x] A Subjectek listája a Subject-fájlokból jön, a megjelenített nevükkel
+- [x] API-teszt: üres adatkönyvtárnál induláskor átmásolódnak a kezdeti Quizek és Subjectek
+- [x] API-teszt: nem üres adatkönyvtárnál semmi nem íródik felül
+- [x] A Practice engine tesztkészlete fut, legalább egy teszttel
+- [x] Az összes teszt egy-egy paranccsal futtatható, és a parancsok le vannak írva az AGENTS.md-ben
