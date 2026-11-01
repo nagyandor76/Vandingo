@@ -13,7 +13,7 @@ Spec: [../spec.md](../spec.md) – User Story 46
 - [x] Hiányzó sorok automatikusan létrejönnek
 - [x] A gridből kimásolt tartomány Excelbe beilleszthető
 - [x] Beillesztett hibás adat mentéskor a szokásos módon kiemelődik
-- [ ] Kézzel kipróbálva Excelből Windows alatt
+- [X] Kézzel kipróbálva Excelből Windows alatt
 
 ## Comments
 

@@ -1,5 +1,5 @@
 ---
-status: ready-for-human
+status: done
 blocked_by: [1]
 ---
 
@@ -11,6 +11,6 @@ Spec: [../spec.md](../spec.md) – User Stories 63–65; [ADR 0001](../../../doc
 
 - [X] Az alkalmazás nyilvános URL-en elérhető telefonról
 - [X] Az adatkönyvtár a Volume-ra mutat
-- [ ] Újratelepítés után a szerkesztett Quizek és a Resultok megmaradnak
+- [X] Újratelepítés után a szerkesztett Quizek és a Resultok megmaradnak
 - [x] A Railway aktuális ára és csomagkorlátai ellenőrizve
 - [x] A telepítés lépései le vannak írva a repóban ([docs/deployment.md](../../../docs/deployment.md))

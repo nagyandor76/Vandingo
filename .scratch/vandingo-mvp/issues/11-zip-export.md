@@ -11,7 +11,7 @@ Spec: [../spec.md](../spec.md) – User Story 62
 
 - [x] API-teszt: a letöltött ZIP tartalmazza az adatkönyvtár összes fájlját, változatlan szerkezetben
 - [x] A fájlnév tartalmazza a letöltés dátumát
-- [ ] Telefonon és számítógépen is letölthető
+- [X] Telefonon és számítógépen is letölthető
 
 ## Comments
 
