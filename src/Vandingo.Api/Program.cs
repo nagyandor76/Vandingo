@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Vandingo.Api.Quizzes;
 using Vandingo.Api.Results;
 using Vandingo.Api.Storage;
@@ -38,11 +39,24 @@ api.MapGet("/subjects/{key}/quizzes", (string key, QuizStore quizzes) =>
     quizzes.List(key) is { } list ? Results.Ok(list) : Results.NotFound());
 api.MapGet("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizStore quizzes) =>
     quizzes.Find(key, difficulty) is { } quiz ? Results.Ok(quiz) : Results.NotFound());
-api.MapPut("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizDraft draft, QuizStore quizzes) =>
+api.MapPut("/subjects/{key}/quizzes/{difficulty:int}", (
+    string key,
+    int difficulty,
+    [FromQuery(Name = "original_difficulty")] int? originalDifficulty,
+    bool? overwrite,
+    QuizDraft draft,
+    QuizStore quizzes) =>
 {
     if (QuizRules.Check(difficulty, draft) is [_, ..] errors) return ValidationError.Response(errors);
-    return quizzes.Save(key, difficulty, draft) ? Results.Ok() : Results.NotFound();
+    return quizzes.Save(key, difficulty, draft, originalDifficulty, overwrite ?? false) switch
+    {
+        QuizStore.SaveOutcome.Saved => Results.Ok(),
+        QuizStore.SaveOutcome.Occupied => Results.Conflict(),
+        _ => Results.NotFound(),
+    };
 });
+api.MapDelete("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizStore quizzes) =>
+    quizzes.Delete(key, difficulty) ? Results.NoContent() : Results.NotFound());
 api.MapGet("/subjects/{key}/questions", (string key, int from, int to, QuizStore quizzes) =>
     quizzes.Questions(key, from, to) is { } questions ? Results.Ok(questions) : Results.NotFound());
 api.MapPost("/results", (NewResult result, ResultStore results) =>
@@ -54,6 +68,7 @@ api.MapGet("/results", (string participant, int? limit, ResultStore results) =>
     results.List(participant, Math.Max(limit ?? 10, 0)));
 api.MapGet("/results/{id}", (string id, ResultStore results) =>
     results.Find(id) is { } result ? Results.Ok(result) : Results.NotFound());
+api.MapGet("/export", (DataPaths paths) => DataExport.Download(paths));
 api.MapFallback(() => Results.NotFound());
 
 app.MapFallbackToFile("index.html");

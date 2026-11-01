@@ -211,6 +211,106 @@ public class QuizApiTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task A_Quiz_moved_to_a_free_Difficulty_is_there_and_no_longer_at_its_original_one()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """{ "name": "Régi", "subject": "history", "difficulty": 3, "default_time": 10, "questions": [] }""");
+        var client = app.CreateClient();
+
+        var response = await client.PutAsJsonAsync("/api/subjects/history/quizzes/8?original_difficulty=3", ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var moved = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes/8");
+        Assert.Equal("Görögök", moved.GetProperty("name").GetString());
+        Assert.Equal(8, moved.GetProperty("difficulty").GetInt32());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/subjects/history/quizzes/3")).StatusCode);
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        Assert.Equal([8], list.EnumerateArray().Select(q => q.GetProperty("difficulty").GetInt32()));
+    }
+
+    [Theory]
+    [InlineData("/api/subjects/history/quizzes/8?original_difficulty=3")]
+    [InlineData("/api/subjects/history/quizzes/8")]
+    public async Task Saving_to_an_occupied_Difficulty_without_overwrite_is_a_conflict_and_changes_nothing(string url)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        const string original = """{ "name": "Régi", "subject": "history", "difficulty": 3, "default_time": 10, "questions": [] }""";
+        const string occupant = """{ "name": "Foglaló", "subject": "history", "difficulty": 8, "default_time": 10, "questions": [] }""";
+        app.WriteData("Quizzes/history/3.json", original);
+        app.WriteData("Quizzes/history/8.json", occupant);
+
+        var response = await app.CreateClient().PutAsJsonAsync(url, ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(original, app.ReadData("Quizzes/history/3.json"));
+        Assert.Equal(occupant, app.ReadData("Quizzes/history/8.json"));
+    }
+
+    [Theory]
+    [InlineData("/api/subjects/history/quizzes/8?original_difficulty=3&overwrite=true", new[] { 8 })]
+    [InlineData("/api/subjects/history/quizzes/8?overwrite=true", new[] { 3, 8 })]
+    public async Task Saving_to_an_occupied_Difficulty_with_overwrite_replaces_its_Quiz(string url, int[] difficultiesAfter)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """{ "name": "Régi", "subject": "history", "difficulty": 3, "default_time": 10, "questions": [] }""");
+        app.WriteData("Quizzes/history/8.json", """{ "name": "Foglaló", "subject": "history", "difficulty": 8, "default_time": 10, "questions": [] }""");
+        var client = app.CreateClient();
+
+        var response = await client.PutAsJsonAsync(url, ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var saved = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes/8");
+        Assert.Equal("Görögök", saved.GetProperty("name").GetString());
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        Assert.Equal(difficultiesAfter, list.EnumerateArray().Select(q => q.GetProperty("difficulty").GetInt32()));
+    }
+
+    [Fact]
+    public async Task Saving_an_existing_Quiz_at_its_own_Difficulty_needs_no_overwrite()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """{ "name": "Régi", "subject": "history", "difficulty": 3, "default_time": 10, "questions": [] }""");
+        var client = app.CreateClient();
+
+        var response = await client.PutAsJsonAsync("/api/subjects/history/quizzes/3?original_difficulty=3", ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Görögök", (await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes/3")).GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task A_deleted_Quiz_cannot_be_loaded_and_is_not_listed()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """{ "name": "Régi", "subject": "history", "difficulty": 3, "default_time": 10, "questions": [] }""");
+        app.WriteData("Quizzes/history/5.json", """{ "name": "Marad", "subject": "history", "difficulty": 5, "default_time": 10, "questions": [] }""");
+        var client = app.CreateClient();
+
+        var response = await client.DeleteAsync("/api/subjects/history/quizzes/3");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/subjects/history/quizzes/3")).StatusCode);
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        Assert.Equal([5], list.EnumerateArray().Select(q => q.GetProperty("difficulty").GetInt32()));
+    }
+
+    [Fact]
+    public async Task Deleting_an_unknown_Quiz_is_not_found()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+
+        var response = await app.CreateClient().DeleteAsync("/api/subjects/history/quizzes/3");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private static async Task<JsonElement[]> Errors(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").EnumerateArray().ToArray();
 

@@ -1,10 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
-import { Alert, Button, CircularProgress, Stack, TextField, Typography, useTheme } from '@mui/material'
-import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type ICellRendererParams } from 'ag-grid-community'
+import { Alert, alpha, Box, Button, CircularProgress, MenuItem, Stack, TextField, Typography, useTheme } from '@mui/material'
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  themeQuartz,
+  type CellFocusedEvent,
+  type ColDef,
+  type ICellRendererParams,
+} from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
-import { fetchQuiz, fetchSubjects, saveQuiz, type ValidationError } from '../api.ts'
-import { emptyRow, questionTypes, speechLanguages, toQuestion, toRow, type EditorRow } from '../editor/rows.ts'
+import { deleteQuiz, fetchQuiz, fetchQuizzes, fetchSubjects, saveQuiz, type QuizSummary, type ValidationError } from '../api.ts'
+import { clipboardFields, copyCells, parseClipboard, pasteCells, type CellPosition, type ClipboardField } from '../editor/clipboard.ts'
+import {
+  emptyRow,
+  languageLabel,
+  questionTypes,
+  speechLanguages,
+  toQuestion,
+  toRow,
+  trueFalseLabel,
+  typeLabel,
+  type EditorRow,
+} from '../editor/rows.ts'
+import ConfirmDialog from './ConfirmDialog.tsx'
 import type { NewQuizState } from './Editor.tsx'
 import Screen from './Screen.tsx'
 
@@ -13,9 +32,7 @@ ModuleRegistry.registerModules([AllCommunityModule])
 /** A new Quiz's default time per Question, in seconds. */
 const newQuizDefaultTime = 10
 
-const typeLabel = (type: unknown) => questionTypes.find((t) => t.type === type)?.label ?? String(type ?? '')
-const trueFalseLabel = (value: unknown) => (value === 'true' ? 'Igaz' : value === 'false' ? 'Hamis' : String(value ?? ''))
-const languageLabel = (value: unknown) => (value ? String(value) : '–')
+const difficulties = Array.from({ length: 20 }, (_, i) => i + 1)
 
 /** Field names the server reports, as the column headers the user sees. */
 const fieldLabels: Record<string, string> = {
@@ -23,6 +40,21 @@ const fieldLabels: Record<string, string> = {
   default_time: 'Alapidő',
   difficulty: 'Szint',
   questions: 'Kérdések',
+}
+
+/** The selected cells for copy and paste: from where Shift was last let go to the focused cell. */
+interface Selection {
+  anchor: CellPosition
+  focus: CellPosition
+}
+
+const isClipboardField = (colId: string): colId is ClipboardField => (clipboardFields as readonly string[]).includes(colId)
+
+const inSelection = (selection: Selection | null, row: number, field: ClipboardField) => {
+  if (!selection) return false
+  const { anchor, focus } = selection
+  const [a, b, c] = [anchor.field, focus.field, field].map((f) => clipboardFields.indexOf(f))
+  return row >= Math.min(anchor.row, focus.row) && row <= Math.max(anchor.row, focus.row) && c >= Math.min(a, b) && c <= Math.max(a, b)
 }
 
 type Loaded =
@@ -49,17 +81,71 @@ export default function QuizEditor() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
+  // Where the Quiz is saved; changing it moves the Quiz there.
+  const [targetDifficulty, setTargetDifficulty] = useState(difficulty)
+  const [otherQuizzes, setOtherQuizzes] = useState<QuizSummary[]>([])
+  const [confirm, setConfirm] = useState<'overwrite' | 'delete'>()
+  const [deleteFailed, setDeleteFailed] = useState(false)
   const grid = useRef<AgGridReact<EditorRow>>(null)
+  // Read by the cell styles, which the grid keeps from its first render.
+  const selection = useRef<Selection | null>(null)
+  const [selectionKey, setSelectionKey] = useState('')
 
-  // The grid redraws only cells whose value changed; an error outline is not a value, so redraw on error changes.
+  // The grid redraws only cells whose value changed; an error outline or the selection is not a value, so redraw on their changes.
   const errorKey = rows.map((row) => (row.error ? `${row.id}:${row.error.field}` : '')).join()
   useEffect(() => {
     grid.current?.api?.refreshCells({ force: true })
-  }, [errorKey])
+  }, [errorKey, selectionKey])
+
+  const select = (next: Selection | null) => {
+    selection.current = next
+    setSelectionKey(next ? JSON.stringify(next) : '')
+  }
+
+  // Shift with a click or an arrow key stretches the selection; otherwise the focused cell is all of it.
+  const cellFocused = (event: CellFocusedEvent<EditorRow>) => {
+    const colId = typeof event.column === 'string' ? event.column : event.column?.getColId()
+    if (event.rowIndex === null || !colId || !isClipboardField(colId)) {
+      select(null)
+      return
+    }
+    const focus = { row: event.rowIndex, field: colId }
+    const shift = (event.sourceEvent as KeyboardEvent | MouseEvent | undefined)?.shiftKey
+    select({ anchor: shift && selection.current ? selection.current.anchor : focus, focus })
+  }
+
+  /** While a cell is being edited, copy and paste stay inside its text. */
+  const editing = () => (grid.current?.api?.getEditingCells().length ?? 0) > 0
+
+  const copy = (event: ClipboardEvent) => {
+    if (editing() || !selection.current) return
+    event.preventDefault()
+    event.clipboardData.setData('text/plain', copyCells(rows, selection.current.anchor, selection.current.focus))
+  }
+
+  const paste = (event: ClipboardEvent) => {
+    if (editing() || !selection.current) return
+    const cells = parseClipboard(event.clipboardData.getData('text/plain'))
+    if (cells.length === 0) return
+    event.preventDefault()
+    const { anchor, focus } = selection.current
+    // Like Excel: into the selection's top left cell.
+    const start = {
+      row: Math.min(anchor.row, focus.row),
+      field: clipboardFields[Math.min(clipboardFields.indexOf(anchor.field), clipboardFields.indexOf(focus.field))],
+    }
+    changed()
+    setRows((all) => pasteCells(all, start, cells))
+  }
 
   useEffect(() => {
     fetchSubjects().then((subjects) => setSubjectName(subjects.find(({ key }) => key === subject)?.name ?? subject), () => {})
   }, [subject])
+
+  useEffect(() => {
+    setTargetDifficulty(difficulty)
+    fetchQuizzes(subject).then((list) => setOtherQuizzes(list.filter((quiz) => quiz.difficulty !== difficulty)), () => {})
+  }, [subject, difficulty])
 
   useEffect(() => {
     let current = true
@@ -108,24 +194,36 @@ export default function QuizEditor() {
     setRows((all) => all.filter((r) => r.id !== id))
   }
 
-  const save = async () => {
+  const isNew = loaded.status === 'ready' && loaded.isNew
+
+  /** Saves to the chosen Difficulty; a Quiz already there is replaced only with `overwrite`, after the user confirmed it. */
+  const save = async (overwrite = false) => {
+    setConfirm(undefined)
     setSaving(true)
     changed()
     const saving = rows
+    const target = targetDifficulty
     try {
-      const outcome = await saveQuiz(subject, difficulty, {
-        name: name.trim(),
-        default_time: defaultTime.trim() === '' ? null : Number(defaultTime),
-        questions: saving.map(toQuestion),
-      })
+      const outcome = await saveQuiz(
+        subject,
+        target,
+        {
+          name: name.trim(),
+          default_time: defaultTime.trim() === '' ? null : Number(defaultTime),
+          questions: saving.map(toQuestion),
+        },
+        { originalDifficulty: isNew ? undefined : difficulty, overwrite },
+      )
       if (outcome.status === 'saved') {
         setRows(saving.map((row) => ({ ...row, error: undefined })))
         setQuizErrors([])
         setSaved(true)
-        if (loaded.status === 'ready' && loaded.isNew) {
-          // From now on it is an existing Quiz, also after a reload.
-          navigate(location.pathname, { replace: true, state: null })
+        if (isNew || target !== difficulty) {
+          // From now on it is an existing Quiz at its new Difficulty, also after a reload.
+          navigate(`/szerkeszto/${encodeURIComponent(subject)}/${target}`, { replace: true, state: null })
         }
+      } else if (outcome.status === 'conflict') {
+        setConfirm('overwrite')
       } else if (outcome.status === 'invalid') {
         setRows(saving.map((row, i) => ({ ...row, error: outcome.errors.find((error) => error.row === i) })))
         setQuizErrors(outcome.errors.filter((error) => error.row === undefined))
@@ -136,6 +234,17 @@ export default function QuizEditor() {
       setSaveFailed(true)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const remove = async () => {
+    setConfirm(undefined)
+    setDeleteFailed(false)
+    try {
+      await deleteQuiz(subject, difficulty)
+      navigate(back, { replace: true })
+    } catch {
+      setDeleteFailed(true)
     }
   }
 
@@ -151,8 +260,17 @@ export default function QuizEditor() {
   )
 
   const columnDefs = useMemo<ColDef<EditorRow>[]>(() => {
-    const errorOutline = (field: string) => (params: { data?: EditorRow }) =>
-      params.data?.error?.field === field ? { outline: `2px solid ${muiTheme.palette.error.main}`, outlineOffset: -3 } : null
+    // A selection of more than one cell is shaded; a cell the last save refused is outlined.
+    const selectedBackground = alpha(muiTheme.palette.primary.main, 0.14)
+    const errorOutline = (field: ClipboardField) => (params: { data?: EditorRow; node?: { rowIndex: number | null } | null }) => {
+      const current = selection.current
+      const many = current && (current.anchor.row !== current.focus.row || current.anchor.field !== current.focus.field)
+      const rowIndex = params.node?.rowIndex ?? -1
+      return {
+        ...(many && inSelection(current, rowIndex, field) && { backgroundColor: selectedBackground }),
+        ...(params.data?.error?.field === field && { outline: `2px solid ${muiTheme.palette.error.main}`, outlineOffset: -3 }),
+      }
+    }
     // Wrapped text gets normal line spacing instead of the row height.
     const wrapped = { lineHeight: 1.45, paddingTop: 10, paddingBottom: 10 }
     const textColumn = (field: 'text' | 'options' | 'answer', headerName: string, flex: number): ColDef<EditorRow> => ({
@@ -202,6 +320,7 @@ export default function QuizEditor() {
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: { values: speechLanguages },
         valueFormatter: (p) => languageLabel(p.value),
+        cellStyle: errorOutline('speak_text'),
       },
       {
         field: 'speak_answer',
@@ -210,6 +329,7 @@ export default function QuizEditor() {
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: { values: speechLanguages },
         valueFormatter: (p) => languageLabel(p.value),
+        cellStyle: errorOutline('speak_answer'),
       },
       {
         headerName: 'Hiba',
@@ -251,6 +371,7 @@ export default function QuizEditor() {
   }
 
   const rowsWithErrors = rows.filter((row) => row.error).length
+  const occupant = otherQuizzes.find((quiz) => quiz.difficulty === targetDifficulty)
 
   return (
     <Screen title={title} back={back} wide>
@@ -277,6 +398,26 @@ export default function QuizEditor() {
           slotProps={{ htmlInput: { min: 1, step: 1 } }}
           sx={{ width: 220 }}
         />
+        <TextField
+          select
+          label="Szint"
+          value={targetDifficulty}
+          onChange={(event) => {
+            changed()
+            setTargetDifficulty(Number(event.target.value))
+          }}
+          error={quizErrors.some((e) => e.field === 'difficulty')}
+          sx={{ width: 220 }}
+        >
+          {difficulties.map((d) => {
+            const quizThere = otherQuizzes.find((quiz) => quiz.difficulty === d)
+            return (
+              <MenuItem key={d} value={d}>
+                {quizThere ? `${d} (foglalt: ${quizThere.name})` : d}
+              </MenuItem>
+            )
+          })}
+        </TextField>
       </Stack>
       <Typography variant="caption" color="text.secondary">
         A listákat (válaszlehetőségek, több helyes válasz) pontosvesszővel válaszd el, pl. „Théba; Memphisz”. Az üres idő az alapidőt jelenti.
@@ -291,30 +432,63 @@ export default function QuizEditor() {
         <Alert severity="error">{rowsWithErrors} hibás sor – a hibás sorok pirosak, az okuk a Hiba oszlopban látszik.</Alert>
       )}
 
-      <AgGridReact<EditorRow>
-        ref={grid}
-        theme={gridTheme}
-        rowData={rows}
-        columnDefs={columnDefs}
-        defaultColDef={{ editable: true, sortable: false, resizable: true, suppressMovable: true }}
-        getRowId={(p) => String(p.data.id)}
-        getRowStyle={(p) => (p.data?.error ? { background: muiTheme.palette.error.soft } : undefined)}
-        onCellValueChanged={(event) => event.data && updateRow(event.data)}
-        stopEditingWhenCellsLoseFocus
-        enterNavigatesVerticallyAfterEdit
-        domLayout="autoHeight"
-      />
+      <Typography variant="caption" color="text.secondary">
+        Excelből Ctrl+V-vel a kijelölt cellától kezdve illeszthetsz be; ha kell, új sorok jönnek létre. Shift+kattintással vagy
+        Shift+nyilakkal jelölhetsz ki több cellát, Ctrl+C-vel Excelbe másolhatod őket.
+      </Typography>
+
+      <Box onCopy={copy} onPaste={paste}>
+        <AgGridReact<EditorRow>
+          ref={grid}
+          theme={gridTheme}
+          rowData={rows}
+          columnDefs={columnDefs}
+          defaultColDef={{ editable: true, sortable: false, resizable: true, suppressMovable: true }}
+          getRowId={(p) => String(p.data.id)}
+          getRowStyle={(p) => (p.data?.error ? { background: muiTheme.palette.error.soft } : undefined)}
+          onCellValueChanged={(event) => event.data && updateRow(event.data)}
+          stopEditingWhenCellsLoseFocus
+          enterNavigatesVerticallyAfterEdit
+          domLayout="autoHeight"
+          onCellFocused={cellFocused}
+        />
+      </Box>
 
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1.5 }}>
         <Button variant="outlined" onClick={addRow}>
           + Új sor
         </Button>
-        <Button variant="contained" onClick={save} disabled={saving}>
+        <Button variant="contained" onClick={() => save()} disabled={saving}>
           Mentés
         </Button>
         {saved && <Alert severity="success">Mentve.</Alert>}
         {saveFailed && <Alert severity="error">Nem sikerült menteni.</Alert>}
+        {!isNew && (
+          <Button color="error" onClick={() => setConfirm('delete')} sx={{ ml: 'auto !important' }}>
+            Kvíz törlése
+          </Button>
+        )}
+        {deleteFailed && <Alert severity="error">Nem sikerült törölni.</Alert>}
       </Stack>
+
+      <ConfirmDialog
+        open={confirm === 'overwrite'}
+        title="Foglalt szint"
+        confirmLabel="Felülírás"
+        onConfirm={() => save(true)}
+        onCancel={() => setConfirm(undefined)}
+      >
+        A(z) {targetDifficulty}. szinten már van kvíz{occupant && <>: „{occupant.name}”</>}. Felülírod? A régi kvíz elvész.
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={confirm === 'delete'}
+        title="Kvíz törlése"
+        confirmLabel="Törlés"
+        onConfirm={remove}
+        onCancel={() => setConfirm(undefined)}
+      >
+        Biztosan törlöd a(z) {difficulty}. szint kvízét („{name}”)? Ez nem vonható vissza.
+      </ConfirmDialog>
     </Screen>
   )
 }
