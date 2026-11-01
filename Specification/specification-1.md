@@ -42,7 +42,7 @@ A legördülő listák törzsadatai az MVP-ben lehetnek hardkódoltak. A gridhez
 
 **Listák a gridben:** az `options` és az `answer` elemei egy cellában `;` jellel elválasztva szerepelnek (pl. `Théba; Memphisz`); az elemek körüli szóközök levágódnak. Igaz–hamis kérdésnél a válasz cellája Igaz/Hamis legördülő lista.
 
-**Ellenőrzés:** ha bármely sor megsérti a típusa szabályait, a mentés nem történik meg; a hibás sorok kiemelve, a hiba okával jelennek meg.
+**Ellenőrzés:** ha bármely sor megsérti a típusa szabályait, vagy a kvíz 5-nél kevesebb kérdést tartalmaz, a mentés nem történik meg; a hibás sorok kiemelve, a hiba okával jelennek meg, a kérdések számára vonatkozó hiba pedig a kvíz egészére.
 
 **Szint módosítása:** egy kvíz szintje megváltoztatható, ekkor a kvíz az új szintre kerül. Ha az új szinten (vagy új kvíz mentésekor a megadott szinten) már van kvíz, a rendszer rákérdez a felülírásra.
 
@@ -56,7 +56,7 @@ A legördülő listák törzsadatai az MVP-ben lehetnek hardkódoltak. A gridhez
 
 A **kvíztípus kérdésenként** adható meg (`type`), így egy kvízben különböző típusú kérdések is lehetnek. A formátum minden típusnál ugyanaz; a típus dönti el, hogy a mezők közül melyiket használja fel, a többit figyelmen kívül hagyja. A szerkesztő és a backend a típus szabályai szerint ellenőriz.
 
-**Kvíz:** `name`, `subject` (a tantárgy kulcsa), `difficulty` (1–20, tantárgyon belül egyedi), `default_time` (kötelező; egy kérdésre rendelkezésre álló alapértelmezett idő másodpercben), `questions`.
+**Kvíz:** `name`, `subject` (a tantárgy kulcsa), `difficulty` (1–20, tantárgyon belül egyedi), `default_time` (kötelező; egy kérdésre rendelkezésre álló alapértelmezett idő másodpercben), `questions` (legalább 5 kérdés, típustól függetlenül).
 
 **Kérdés:**
 

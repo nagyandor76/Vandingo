@@ -11,6 +11,11 @@
       "time": 10
     },
     {
+      "type": "true-false",
+      "text": "A Nílus Európában folyik.",
+      "answer": ["false"]
+    },
+    {
       "type": "word-matching",
       "text": "pyramid",
       "speak_text": "en-GB",

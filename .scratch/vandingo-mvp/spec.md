@@ -93,7 +93,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 47. Mint szülő, a listákat (`options`, `answer`) egy cellában `;` jellel elválasztva akarom megadni.
 48. Mint szülő, igaz–hamis Questionnél Igaz/Hamis legördülő listából akarom kiválasztani a választ.
 49. Mint szülő, Questionönként meg akarom adni az időt és a felolvasás nyelvét.
-50. Mint szülő, ha valamelyik sor hibás, nem akarom, hogy a mentés megtörténjen; a hibás sorokat kiemelve, a hiba okával akarom látni.
+50. Mint szülő, ha valamelyik sor hibás, vagy a Quiz 5-nél kevesebb Questiont tartalmaz, nem akarom, hogy a mentés megtörténjen; a hibás sorokat kiemelve, a hiba okával akarom látni.
 51. Mint szülő, a Quiz Difficultyjét meg akarom változtatni, és ha az új szint foglalt, a rendszer kérdezzen rá a felülírásra.
 52. Mint szülő, új Quiz mentésekor foglalt szint esetén felülírási kérdést akarok kapni.
 53. Mint szülő, egy teljes Quizt törölni akarok, megerősítés után.
@@ -129,7 +129,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 
 ### Adatformátumok
 
-- **Quiz-fájl** Subjectenként és Difficultyként egy, a Difficulty a fájlnév. Mezők: `name`, `subject`, `difficulty`, `default_time`, `questions`. Question mezők: `type`, `text`, `options`, `answer`, `time`, `speak_text`, `speak_answer` – részletek a specifikáció 4.2 pontjában.
+- **Quiz-fájl** Subjectenként és Difficultyként egy, a Difficulty a fájlnév. Mezők: `name`, `subject`, `difficulty`, `default_time`, `questions` (legalább 5 Question). Question mezők: `type`, `text`, `options`, `answer`, `time`, `speak_text`, `speak_answer` – részletek a specifikáció 4.2 pontjában.
 - **Subject-fájl** Subjectenként egy, a Subject mappájában: `key`, `name`, `max_questions`, `auto_advance`.
 - **Result-fájl** Practice-enként egy: `id`, `completedAt`, `participant`, `subject`, `difficultyFrom`, `difficultyTo`, `total`, `correct`, `incorrect`, `scorePercent`, `timeLimitSeconds`, `elapsedSeconds`.
 - A Quiz- és Subject-fájlok snake_case, a Result-fájl camelCase kulcsokat használ; ez a meglévő mintafájlokból örökölt eltérés, amelyet a szerver szerializációja típusonként kezel.
@@ -137,7 +137,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 ### Backend modulok
 
 - **Adattár:** Subjectek, Quizek és Resultok olvasása és írása az adatkönyvtárban. Az írás atomikus (ideiglenes fájlba írás, majd átnevezés), hogy félbeszakadt írás ne rontson el fájlt. Párhuzamos mentésnél az utolsó nyer, zárolás nincs.
-- **Ellenőrzés:** a Quiz mentése előtt minden Questiont a típusa szabályai szerint ellenőriz; hibánál soronkénti hibalistát ad vissza (sor indexe, mező, üzenet), és nem ír semmit. A Subject kulcsát a szabály szerint ellenőrzi.
+- **Ellenőrzés:** a Quiz mentése előtt ellenőrzi, hogy legalább 5 Questiont tartalmaz, és minden Questiont a típusa szabályai szerint ellenőriz; hibánál soronkénti hibalistát ad vissza (sor indexe, mező, üzenet; a Questionök számára vonatkozó hibánál sor index nélkül), és nem ír semmit. A Subject kulcsát a szabály szerint ellenőrzi.
 - **Kezdeti adatok:** induláskor, ha az adatkönyvtár Quiz-része üres, egyszer átmásolja a repó Quiz-mappáját.
 - **Export:** a teljes adatkönyvtár ZIP-ként.
 
