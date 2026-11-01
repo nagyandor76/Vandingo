@@ -8,6 +8,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/kitoltes" element={<PracticeStart />} />
+      <Route path="/kitoltes/gyakorlas" element={<Placeholder title="Gyakorlás" />} />
       <Route path="/szerkeszto" element={<Placeholder title="Szerkesztő mód" />} />
       <Route path="/eredmenyek" element={<Placeholder title="Eredmény böngésző" />} />
       <Route path="/beallitasok" element={<Placeholder title="Beállítások" />} />

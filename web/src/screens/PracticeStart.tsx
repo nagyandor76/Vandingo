@@ -1,32 +1,147 @@
 import { useEffect, useState } from 'react'
-import { Alert, CircularProgress, List, ListItemButton, ListItemText, Paper } from '@mui/material'
-import { fetchSubjects, type Subject } from '../api.ts'
+import { useNavigate } from 'react-router'
+import { Alert, Button, CircularProgress, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { fetchQuizzes, fetchSubjects, type QuizSummary, type Subject } from '../api.ts'
+import { participants, type Participant } from '../participants.ts'
+import { playableTypes } from '../practice/engine.ts'
 import Screen from './Screen.tsx'
 
+/** Picks the Participant, the Subject and the inclusive Difficulty range of a Practice. */
 export default function PracticeStart() {
+  const navigate = useNavigate()
   const [subjects, setSubjects] = useState<Subject[]>()
-  const [error, setError] = useState(false)
+  const [subjectsError, setSubjectsError] = useState(false)
+  const [participant, setParticipant] = useState<Participant | null>(null)
+  const [subject, setSubject] = useState('')
+  const [quizzes, setQuizzes] = useState<QuizSummary[]>()
+  const [quizzesError, setQuizzesError] = useState(false)
+  const [from, setFrom] = useState(0)
+  const [to, setTo] = useState(0)
 
   useEffect(() => {
-    fetchSubjects().then(setSubjects, () => setError(true))
+    fetchSubjects().then(setSubjects, () => setSubjectsError(true))
   }, [])
+
+  useEffect(() => {
+    if (!subject) return
+    let current = true
+    fetchQuizzes(subject).then(
+      (list) => {
+        if (!current) return
+        setQuizzes(list)
+        setFrom(list[0]?.difficulty ?? 0)
+        setTo(list.at(-1)?.difficulty ?? 0)
+      },
+      () => current && setQuizzesError(true),
+    )
+    return () => {
+      current = false
+    }
+  }, [subject])
+
+  const changeSubject = (key: string) => {
+    if (key === subject) return
+    setSubject(key)
+    setQuizzes(undefined)
+    setQuizzesError(false)
+  }
+
+  const changeFrom = (difficulty: number) => {
+    setFrom(difficulty)
+    if (to < difficulty) setTo(difficulty)
+  }
+
+  const inRange = quizzes?.filter((quiz) => quiz.difficulty >= from && quiz.difficulty <= to) ?? []
+  const playableCount = inRange.reduce(
+    (sum, quiz) => sum + playableTypes.reduce((n, type) => n + (quiz.question_counts[type] ?? 0), 0),
+    0,
+  )
+  const nothingPlayable = quizzes !== undefined && quizzes.length > 0 && playableCount === 0
+
+  const start = () => {
+    const query = new URLSearchParams({ participant: participant!, subject, from: String(from), to: String(to) })
+    navigate(`/kitoltes/gyakorlas?${query}`)
+  }
 
   return (
     <Screen title="Kitöltés">
-      {error && <Alert severity="error">Nem sikerült betölteni a tantárgyakat.</Alert>}
-      {!error && !subjects && <CircularProgress sx={{ alignSelf: 'center' }} />}
+      {subjectsError && <Alert severity="error">Nem sikerült betölteni a tantárgyakat.</Alert>}
+      {!subjectsError && !subjects && <CircularProgress sx={{ alignSelf: 'center' }} />}
       {subjects?.length === 0 && <Alert severity="info">Még nincs egyetlen tantárgy sem.</Alert>}
       {subjects && subjects.length > 0 && (
-        <Paper>
-          <List>
-            {subjects.map((subject) => (
-              <ListItemButton key={subject.key}>
-                <ListItemText primary={subject.name} />
-              </ListItemButton>
+        <>
+          <Stack spacing={1}>
+            <Typography variant="h3" component="h2">
+              Ki tölti ki?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              color="primary"
+              value={participant}
+              onChange={(_, value: Participant | null) => value && setParticipant(value)}
+              aria-label="Kitöltő"
+            >
+              {participants.map((name) => (
+                <ToggleButton key={name} value={name} sx={{ minHeight: 48 }}>
+                  {name}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
+
+          <TextField select label="Tantárgy" value={subject} onChange={(event) => changeSubject(event.target.value)}>
+            {subjects.map(({ key, name }) => (
+              <MenuItem key={key} value={key}>
+                {name}
+              </MenuItem>
             ))}
-          </List>
-        </Paper>
+          </TextField>
+
+          {quizzesError && <Alert severity="error">Nem sikerült betölteni a kvízeket.</Alert>}
+          {subject && !quizzesError && !quizzes && <CircularProgress sx={{ alignSelf: 'center' }} />}
+          {quizzes?.length === 0 && <Alert severity="info">Ebben a tantárgyban még nincs kvíz.</Alert>}
+          {quizzes && quizzes.length > 0 && (
+            <>
+              <DifficultyPicker label="Kezdő szint" quizzes={quizzes} value={from} onChange={changeFrom} />
+              <DifficultyPicker
+                label="Záró szint"
+                quizzes={quizzes.filter((quiz) => quiz.difficulty >= from)}
+                value={to}
+                onChange={setTo}
+              />
+            </>
+          )}
+
+          {nothingPlayable && <Alert severity="warning">Ebben a tartományban nincs kitölthető kérdés.</Alert>}
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            disabled={!participant || playableCount === 0}
+            onClick={start}
+          >
+            Start
+          </Button>
+        </>
       )}
     </Screen>
+  )
+}
+
+function DifficultyPicker({ label, quizzes, value, onChange }: {
+  label: string
+  quizzes: QuizSummary[]
+  value: number
+  onChange: (difficulty: number) => void
+}) {
+  return (
+    <TextField select label={label} value={value} onChange={(event) => onChange(Number(event.target.value))}>
+      {quizzes.map(({ difficulty, name }) => (
+        <MenuItem key={difficulty} value={difficulty}>
+          {difficulty} – {name}
+        </MenuItem>
+      ))}
+    </TextField>
   )
 }

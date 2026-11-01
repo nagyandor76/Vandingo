@@ -6,11 +6,11 @@ Spec: [../spec.md](../spec.md) – User Stories 3–9
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A Participant kiválasztása kötelező, a lista hardkódolt
-- [ ] A szintválasztók csak létező szinteket mutatnak, „szám – név” formában
-- [ ] A záró szint nem lehet kisebb a kezdőnél
-- [ ] API-teszt: a Quizek listája Difficultyt, nevet és típusonkénti kérdésszámot ad vissza
-- [ ] API-teszt: a tartomány Questionjei lekérhetők, mindkét végpont benne van, az idő a Quiz alapértelmezett idejével feloldva
-- [ ] Kitölthető kérdés nélküli tartománynál inaktív Start gomb és magyarázó üzenet
+- [x] A Participant kiválasztása kötelező, a lista hardkódolt
+- [x] A szintválasztók csak létező szinteket mutatnak, „szám – név” formában
+- [x] A záró szint nem lehet kisebb a kezdőnél
+- [x] API-teszt: a Quizek listája Difficultyt, nevet és típusonkénti kérdésszámot ad vissza
+- [x] API-teszt: a tartomány Questionjei lekérhetők, mindkét végpont benne van, az idő a Quiz alapértelmezett idejével feloldva
+- [x] Kitölthető kérdés nélküli tartománynál inaktív Start gomb és magyarázó üzenet

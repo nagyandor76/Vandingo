@@ -3,6 +3,9 @@
 
 export type QuestionType = 'true-false' | 'word-matching' | 'multiple-choice' | 'ordered'
 
+/** The question types a Practice can present; Questions of other types are skipped. */
+export const playableTypes: readonly QuestionType[] = ['true-false', 'word-matching']
+
 /** A Question as served for a Practice, its `time` already resolved against the Quiz default. */
 export interface PracticeQuestion {
   type: QuestionType
