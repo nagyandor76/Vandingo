@@ -24,7 +24,7 @@ A weboldal indításakor kötelező választani az alábbiak közül:
 
 A kitöltés esetén a személy kiválasztása után **tantárgyat**, majd a **kezdő és záró nehézséget** adja meg. Mindkét szintválasztóban a szám és a kvíz neve együtt jelenik meg, és csak azok a szintek szerepelnek, amelyekhez létezik kvíz. A tartomány mindkét végpontja beletartozik a feladatválasztásba (pl. 1, 2, 5, 9 létező szint esetén a 2–9 tartomány a 2., 5. és 9. szintet jelenti).
 
-Ha a tartományban nincs kitölthető kérdés, a Start gomb inaktív, és ez az üzenet látható: „Ebben a tartományban nincs kitölthető kérdés.”
+Ha a tartományban egyik kitölthető típusból sincs legalább egy teljes blokknyi kérdés (lásd 5.1), a Start gomb inaktív, és ez az üzenet látható: „Ebben a tartományban nincs elég kitölthető kérdés.”
 
 ## 4. Szerkesztői felület
 
@@ -99,6 +99,7 @@ Minden tantárgy mappájában van egy `subject.json`, amely a tantárgy adatait 
 ### 5.1. Gyakorlás általános működés
 
 - A kérdések a kijelölt nehézségi tartomány kitölthető kérdései közül **véletlenszerűen, ismétlés nélkül**, a gyakorlás indításakor előre kerülnek kiválasztásra.
+- Egy kitölthető típus csak akkor kerül a gyakorlásba, ha a tartományban legalább egy teljes blokknyi kérdés van belőle: igaz–hamisból legalább 3, szópárosításból legalább 5. Ha kevesebb van, abból a típusból a rendszer egyetlen kérdést sem választ. Ha így egyik típus sem marad, a gyakorlás nem indítható.
 - A kiválasztott kérdések száma: a tantárgy `max_questions` értéke, vagy kevesebb, ha a tartományban nincs ennyi kérdés.
 - Egy angol vagy magyar szó egy gyakorlás kiválasztott kérdései között **csak egyszer** szerepelhet; az ismétlődőket a kiválasztás kiszűri.
 - Egy szópárosító blokkhoz legalább 2 pár kell. Ha a kiválasztás egyetlen szópárosítós kérdést hagyna egyedül, azt a rendszer a tartomány egy másik kitölthető kérdésére cseréli.

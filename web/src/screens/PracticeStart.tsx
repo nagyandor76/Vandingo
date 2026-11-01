@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { Alert, Button, CircularProgress, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import { fetchQuizzes, fetchSubjects, type QuizSummary, type Subject } from '../api.ts'
 import { participants, type Participant } from '../participants.ts'
-import { playableTypes } from '../practice/engine.ts'
+import { usableTypes, type QuestionType } from '../practice/engine.ts'
 import Screen from './Screen.tsx'
 
 /** Picks the Participant, the Subject and the inclusive Difficulty range of a Practice. */
@@ -51,12 +51,15 @@ export default function PracticeStart() {
     if (to < difficulty) setTo(difficulty)
   }
 
-  const inRange = quizzes?.filter((quiz) => quiz.difficulty >= from && quiz.difficulty <= to) ?? []
-  const playableCount = inRange.reduce(
-    (sum, quiz) => sum + playableTypes.reduce((n, type) => n + (quiz.question_counts[type] ?? 0), 0),
-    0,
-  )
-  const nothingPlayable = quizzes !== undefined && quizzes.length > 0 && playableCount === 0
+  const rangeCounts: Partial<Record<QuestionType, number>> = {}
+  for (const quiz of quizzes ?? []) {
+    if (quiz.difficulty < from || quiz.difficulty > to) continue
+    for (const [type, count] of Object.entries(quiz.question_counts) as [QuestionType, number][]) {
+      rangeCounts[type] = (rangeCounts[type] ?? 0) + count
+    }
+  }
+  const startable = usableTypes(rangeCounts).length > 0
+  const notEnough = quizzes !== undefined && quizzes.length > 0 && !startable
 
   const start = () => {
     const query = new URLSearchParams({ participant: participant!, subject, from: String(from), to: String(to) })
@@ -113,12 +116,12 @@ export default function PracticeStart() {
             </>
           )}
 
-          {nothingPlayable && <Alert severity="warning">Ebben a tartományban nincs kitölthető kérdés.</Alert>}
+          {notEnough && <Alert severity="warning">Ebben a tartományban nincs elég kitölthető kérdés.</Alert>}
           <Button
             variant="contained"
             size="large"
             fullWidth
-            disabled={!participant || playableCount === 0}
+            disabled={!participant || !startable}
             onClick={start}
           >
             Start

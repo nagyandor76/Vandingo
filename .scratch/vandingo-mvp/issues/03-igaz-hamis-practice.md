@@ -9,7 +9,7 @@ Spec: [../spec.md](../spec.md) – User Stories 10–13, 17–22, 36, 38–40
 **Status:** ready-for-agent
 
 - [ ] Practice engine-teszt: a kiválasztás tiszteletben tartja a maximumot, és kevesebb Question esetén az összeset adja
-- [ ] Practice engine-teszt: csak kitölthető típusok kerülnek be
+- [ ] Practice engine-teszt: csak kitölthető típusok kerülnek be, és csak azok, amelyekből a tartományban legalább egy teljes Blocknyi van (a `usableTypes` szabálya)
 - [ ] Practice engine-teszt: 3 állításos Blockok, az utolsó lehet rövidebb
 - [ ] Practice engine-teszt: megválaszolatlan állítás hibásnak számít
 - [ ] Practice engine-teszt: időlejáratkor az aktuális Block kiértékelődik, a meg nem jelent Questionök hibásak, `total` a kiválasztott Questionök száma, `elapsedSeconds` = `timeLimitSeconds`

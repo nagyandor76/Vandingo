@@ -34,14 +34,14 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 6. Mint Participant, a szintválasztóban a szám mellett a Quiz nevét is látni akarom, hogy tudjam, melyik szint mit takar.
 7. Mint Participant, a szintválasztóban csak a ténylegesen létező szinteket akarom látni, hogy ne válasszak üres szintet.
 8. Mint Participant, azt akarom, hogy a választott tartomány mindkét végpontja beletartozzon a Practice-be.
-9. Mint Participant, ha a tartományban nincs kitölthető Question, inaktív Start gombot és magyarázó üzenetet akarok látni, hogy értsem, miért nem indul.
+9. Mint Participant, ha a tartományban egyik kitölthető típusból sincs egy teljes Blockra való Question (3 igaz–hamis vagy 5 szópár), inaktív Start gombot és magyarázó üzenetet akarok látni, hogy értsem, miért nem indul.
 
 ### Kitöltés: a Practice összeállítása
 
 10. Mint Participant, véletlenszerűen, ismétlés nélkül kiválasztott Questionöket akarok kapni, hogy minden Practice más legyen.
 11. Mint szülő, azt akarom, hogy egy Practice legfeljebb a Subjecthez beállított számú Questiont tartalmazza, hogy a gyakorlás ne legyen túl hosszú.
 12. Mint Participant, ha a tartományban kevesebb Question van a maximumnál, az összeset meg akarom kapni.
-13. Mint Participant, csak igaz–hamis és szópárosítós Questionöket akarok kapni, mert a többi típus még nem kitölthető.
+13. Mint Participant, csak igaz–hamis és szópárosítós Questionöket akarok kapni, mert a többi típus még nem kitölthető; egy típusból pedig csak akkor, ha a tartományban legalább egy teljes Blockra való van belőle (3 igaz–hamis, 5 szópár), különben abból a típusból semmit.
 14. Mint Participant, egy angol vagy magyar szót egy Practice-ben csak egyszer akarok látni, hogy a párosítás egyértelmű legyen.
 15. Mint Participant, legalább 2 párt akarok látni egy szópárosító Blockban, hogy ne kapjak triviális feladatot.
 16. Mint Participant, a Blockok típusát vegyesen, véletlenszerűen akarom kapni, hogy változatos legyen a gyakorlás.
@@ -160,7 +160,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 
 ### Frontend modulok
 
-- **Practice engine:** önálló, felülettől független modul. Bemenete a tartomány Questionjei, a Subject beállításai, egy véletlenszám-forrás és egy óra. Műveletei: indítás, igaz–hamis válasz megadása, szópár összeállítása, Block lezárása, idő múlása, továbblépés. Minden művelet után a teljes állapotot adja vissza: aktuális Block és elemei, válaszok, kiértékelés, hátralévő idő, felolvasandó állítás, a Practice vége esetén a Result. Ez a modul tartalmazza a kiválasztás, ismétlésszűrés, Blockképzés, súlyozott típusválasztás, pontozás, időlejárat és felolvasási sorrend szabályait.
+- **Practice engine:** önálló, felülettől független modul. Bemenete a tartomány Questionjei, a Subject beállításai, egy véletlenszám-forrás és egy óra. Műveletei: indítás, igaz–hamis válasz megadása, szópár összeállítása, Block lezárása, idő múlása, továbblépés. Minden művelet után a teljes állapotot adja vissza: aktuális Block és elemei, válaszok, kiértékelés, hátralévő idő, felolvasandó állítás, a Practice vége esetén a Result. Ez a modul tartalmazza a kiválasztás (a teljes Blocknyi Questiont el nem érő típusok kihagyása, és ebből az indíthatóság), ismétlésszűrés, Blockképzés, súlyozott típusválasztás, pontozás, időlejárat és felolvasási sorrend szabályait.
 - **Képernyők:** kezdőképernyő, Kitöltés (indítás, igaz–hamis Block, szópárosító Block, összesítés), Szerkesztő (AG Grid), Eredmény böngésző, Beállítások. A képernyők csak megjelenítik a Practice engine állapotát és továbbítják a műveleteket.
 - **Felolvasás és hang:** a böngésző SpeechSynthesis API-ja, vékony adapter mögött; a Practice engine csak azt mondja meg, mit kell felolvasni.
 - A Participantok listája (Janka, Vanda, Gréta, János) hardkódolt.
@@ -169,7 +169,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 
 - **Jó teszt:** csak külső viselkedést ellenőriz a tesztelési ponton keresztül (kérés → válasz és létrejött fájlok; művelet → állapot), belső függvényeket és implementációs részleteket nem. Egy refaktorálás ne törjön el tesztet, ha a viselkedés nem változott.
 - **1. tesztelési pont – backend HTTP API:** a teljes alkalmazás memóriában fut egy ideiglenes adatkönyvtárral; a tesztek HTTP-kéréseket küldenek, és a válaszokat, valamint az adatkönyvtár tartalmát ellenőrzik. Lefedi: Quiz mentés/betöltés/törlés/áthelyezés és felülírási ütközés, típusonkénti ellenőrzés, Subject létrehozás és kulcsszabályok, Result mentés és listázás, kezdeti adatok átmásolása és nem felülírása, export.
-- **2. tesztelési pont – Practice engine:** rögzített véletlenszám-forrással és vezérelt órával, determinisztikusan. Lefedi: kiválasztás és maximum, csak kitölthető típusok, ismétlődő szavak szűrése, legalább 2 pár Blockonként, Blockméretek, súlyozott típusválasztás, pontozás, félkész Block és időlejárat, `total` és `elapsedSeconds` számítása, a felolvasandó állítás kiválasztása.
+- **2. tesztelési pont – Practice engine:** rögzített véletlenszám-forrással és vezérelt órával, determinisztikusan. Lefedi: kiválasztás és maximum, csak kitölthető típusok, teljes Blocknyi Question nélküli típusok kihagyása, ismétlődő szavak szűrése, legalább 2 pár Blockonként, Blockméretek, súlyozott típusválasztás, pontozás, félkész Block és időlejárat, `total` és `elapsedSeconds` számítása, a felolvasandó állítás kiválasztása.
 - **Nem tesztelünk automatikusan:** React-képernyők, hangok, felolvasás, AG Grid beillesztés. Ezeket kézzel ellenőrizzük telefonon és számítógépen.
 - **Előzmény:** a repóban még nincs kód és nincs teszt; ez a projekt első tesztkészlete.
 

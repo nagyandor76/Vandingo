@@ -3,8 +3,16 @@
 
 export type QuestionType = 'true-false' | 'word-matching' | 'multiple-choice' | 'ordered'
 
-/** The question types a Practice can present; Questions of other types are skipped. */
-export const playableTypes: readonly QuestionType[] = ['true-false', 'word-matching']
+/** The question types a Practice can present, with the number of Questions in one whole Block. */
+const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5 }
+
+/**
+ * The playable types a Practice draws from, given a range's Question count per type: a type is used
+ * only if the range holds at least one whole Block of it. Nothing used means the Practice can't start.
+ */
+export function usableTypes(counts: Partial<Record<QuestionType, number>>): QuestionType[] {
+  return (Object.keys(blockSizes) as QuestionType[]).filter((type) => (counts[type] ?? 0) >= blockSizes[type]!)
+}
 
 /** A Question as served for a Practice, its `time` already resolved against the Quiz default. */
 export interface PracticeQuestion {
