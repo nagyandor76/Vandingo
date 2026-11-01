@@ -1,3 +1,8 @@
+---
+status: done
+blocked_by: [1]
+---
+
 # 13: Design-alap – téma és közös képernyőkeret
 
 Spec: [../spec.md](../spec.md) – User Stories 1–2
@@ -6,9 +11,7 @@ Spec: [../spec.md](../spec.md) – User Stories 1–2
 
 Az animációk, a hangos/vizuális visszajelzés finomítása, az ikonok és az üres állapotok nem ennek a ticketnek a részei; ezek egy későbbi, a 12-es előtti „UI polish” ticketbe kerülnek.
 
-**Blocked by:** 01. A 02–05 előtt érdemes elkészíteni.
-
-**Status:** done
+**Megjegyzés:** A 02–05 előtt érdemes elkészíteni.
 
 - [x] Stílusirány kiválasztva a prototípus változatai közül, a döntés indoka a Comments alatt
 - [x] MUI téma: paletta (köztük a helyes/hibás szín), tipográfia, lekerekítés, gombstílus egy helyen definiálva

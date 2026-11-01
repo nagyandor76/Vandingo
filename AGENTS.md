@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues and specs live as local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+Issues and specs live as local markdown files under `.scratch/`, with their status in YAML frontmatter. `npm run tickets` lists them (`-- --ready` for the ones that can start now). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

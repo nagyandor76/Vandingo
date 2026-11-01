@@ -1,6 +1,8 @@
-# Vandingo MVP
+---
+status: ready-for-agent
+---
 
-**Status:** ready-for-agent
+# Vandingo MVP
 
 Forrás: [Specification/specification-1.md](../../Specification/specification-1.md) (részletes követelmények), [GLOSSARY.md](../../GLOSSARY.md) (fogalmak), [ADR 0001](../../docs/adr/0001-csharp-backend-json-fajlok-railway-on.md) (architektúra). Ahol ez a dokumentum és a specifikáció eltér, a specifikáció a mérvadó.
 

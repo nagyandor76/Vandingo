@@ -1,12 +1,13 @@
+---
+status: done
+blocked_by: [1]
+---
+
 # 07: Szerkesztő – Quiz megnyitása, létrehozása és mentése
 
 Spec: [../spec.md](../spec.md) – User Stories 41–45, 47–50, 54
 
 **What to build:** A Szerkesztő módban a felhasználó kiválasztja a Subjectet, majd megnyit egy meglévő Quizt, vagy újat hoz létre névvel és Difficultyvel (alapidő 10 másodperc). A Quiz összes Questionje egyetlen AG Gridben szerkeszthető; a típus soronként választható; sorok hozzáadhatók és törölhetők. Az `options` és `answer` listák egy cellában `;` jellel elválasztva szerepelnek, igaz–hamisnál Igaz/Hamis legördülő listával. Mentéskor a szerver ellenőrzi, hogy a Quiz legalább 5 Questiont tartalmaz, és típusonként ellenőriz; hibánál semmi nem íródik, a hibás sorok kiemelve, a hiba okával jelennek meg. Mind a négy típus menthető.
-
-**Blocked by:** 01
-
-**Status:** done
 
 - [x] API-teszt: érvényes Quiz mentése után visszatölthető, és a fájl formátuma a specifikáció szerinti
 - [x] API-teszt: típusonként legalább egy szabálysértés 400-at ad soronkénti hibalistával, és nem ír fájlt

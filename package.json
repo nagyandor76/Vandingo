@@ -2,6 +2,7 @@
   "name": "vandingo",
   "private": true,
   "scripts": {
-    "start": "cd web && npm install && npm run build && cd .. && dotnet run --project src/Vandingo.Api --launch-profile http"
+    "start": "cd web && npm install && npm run build && cd .. && dotnet run --project src/Vandingo.Api --launch-profile http",
+    "tickets": "node scripts/tickets.mjs"
   }
 }
