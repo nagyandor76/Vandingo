@@ -13,6 +13,11 @@ export const questionTypes: { type: QuestionType; label: string }[] = [
 /** Speech languages offered in the grid; '' means no reading aloud. */
 export const speechLanguages = ['', 'en-GB', 'en-US', 'hu-HU']
 
+/** How the grid shows a Question type, a true–false answer and a speech language. */
+export const typeLabel = (type: unknown) => questionTypes.find((t) => t.type === type)?.label ?? String(type ?? '')
+export const trueFalseLabel = (value: unknown) => (value === 'true' ? 'Igaz' : value === 'false' ? 'Hamis' : String(value ?? ''))
+export const languageLabel = (value: unknown) => (value ? String(value) : '–')
+
 export interface EditorRow {
   /** Stable while the Editor is open, so errors stay on their row when rows are added or deleted. */
   id: number
