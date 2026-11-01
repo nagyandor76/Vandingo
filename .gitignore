@@ -10,3 +10,6 @@ src/Vandingo.Api/wwwroot/
 
 # Local data directory (development)
 /data/
+
+# Claude Code agent worktrees
+.claude/worktrees/
