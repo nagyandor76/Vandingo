@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
-import { Alert, Button, CircularProgress, Stack, TextField, Typography, useTheme } from '@mui/material'
+import { Alert, Button, CircularProgress, MenuItem, Stack, TextField, Typography, useTheme } from '@mui/material'
 import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type ICellRendererParams } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
-import { fetchQuiz, fetchSubjects, saveQuiz, type ValidationError } from '../api.ts'
+import { deleteQuiz, fetchQuiz, fetchQuizzes, fetchSubjects, saveQuiz, type QuizSummary, type ValidationError } from '../api.ts'
 import { emptyRow, questionTypes, speechLanguages, toQuestion, toRow, type EditorRow } from '../editor/rows.ts'
+import ConfirmDialog from './ConfirmDialog.tsx'
 import type { NewQuizState } from './Editor.tsx'
 import Screen from './Screen.tsx'
 
@@ -12,6 +13,8 @@ ModuleRegistry.registerModules([AllCommunityModule])
 
 /** A new Quiz's default time per Question, in seconds. */
 const newQuizDefaultTime = 10
+
+const difficulties = Array.from({ length: 20 }, (_, i) => i + 1)
 
 const typeLabel = (type: unknown) => questionTypes.find((t) => t.type === type)?.label ?? String(type ?? '')
 const trueFalseLabel = (value: unknown) => (value === 'true' ? 'Igaz' : value === 'false' ? 'Hamis' : String(value ?? ''))
@@ -49,6 +52,11 @@ export default function QuizEditor() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
+  // Where the Quiz is saved; changing it moves the Quiz there.
+  const [targetDifficulty, setTargetDifficulty] = useState(difficulty)
+  const [otherQuizzes, setOtherQuizzes] = useState<QuizSummary[]>([])
+  const [confirm, setConfirm] = useState<'overwrite' | 'delete'>()
+  const [deleteFailed, setDeleteFailed] = useState(false)
   const grid = useRef<AgGridReact<EditorRow>>(null)
 
   // The grid redraws only cells whose value changed; an error outline is not a value, so redraw on error changes.
@@ -60,6 +68,11 @@ export default function QuizEditor() {
   useEffect(() => {
     fetchSubjects().then((subjects) => setSubjectName(subjects.find(({ key }) => key === subject)?.name ?? subject), () => {})
   }, [subject])
+
+  useEffect(() => {
+    setTargetDifficulty(difficulty)
+    fetchQuizzes(subject).then((list) => setOtherQuizzes(list.filter((quiz) => quiz.difficulty !== difficulty)), () => {})
+  }, [subject, difficulty])
 
   useEffect(() => {
     let current = true
@@ -108,24 +121,36 @@ export default function QuizEditor() {
     setRows((all) => all.filter((r) => r.id !== id))
   }
 
-  const save = async () => {
+  const isNew = loaded.status === 'ready' && loaded.isNew
+
+  /** Saves to the chosen Difficulty; a Quiz already there is replaced only with `overwrite`, after the user confirmed it. */
+  const save = async (overwrite = false) => {
+    setConfirm(undefined)
     setSaving(true)
     changed()
     const saving = rows
+    const target = targetDifficulty
     try {
-      const outcome = await saveQuiz(subject, difficulty, {
-        name: name.trim(),
-        default_time: defaultTime.trim() === '' ? null : Number(defaultTime),
-        questions: saving.map(toQuestion),
-      })
+      const outcome = await saveQuiz(
+        subject,
+        target,
+        {
+          name: name.trim(),
+          default_time: defaultTime.trim() === '' ? null : Number(defaultTime),
+          questions: saving.map(toQuestion),
+        },
+        { originalDifficulty: isNew ? undefined : difficulty, overwrite },
+      )
       if (outcome.status === 'saved') {
         setRows(saving.map((row) => ({ ...row, error: undefined })))
         setQuizErrors([])
         setSaved(true)
-        if (loaded.status === 'ready' && loaded.isNew) {
-          // From now on it is an existing Quiz, also after a reload.
-          navigate(location.pathname, { replace: true, state: null })
+        if (isNew || target !== difficulty) {
+          // From now on it is an existing Quiz at its new Difficulty, also after a reload.
+          navigate(`/szerkeszto/${encodeURIComponent(subject)}/${target}`, { replace: true, state: null })
         }
+      } else if (outcome.status === 'conflict') {
+        setConfirm('overwrite')
       } else if (outcome.status === 'invalid') {
         setRows(saving.map((row, i) => ({ ...row, error: outcome.errors.find((error) => error.row === i) })))
         setQuizErrors(outcome.errors.filter((error) => error.row === undefined))
@@ -136,6 +161,17 @@ export default function QuizEditor() {
       setSaveFailed(true)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const remove = async () => {
+    setConfirm(undefined)
+    setDeleteFailed(false)
+    try {
+      await deleteQuiz(subject, difficulty)
+      navigate(back, { replace: true })
+    } catch {
+      setDeleteFailed(true)
     }
   }
 
@@ -251,6 +287,7 @@ export default function QuizEditor() {
   }
 
   const rowsWithErrors = rows.filter((row) => row.error).length
+  const occupant = otherQuizzes.find((quiz) => quiz.difficulty === targetDifficulty)
 
   return (
     <Screen title={title} back={back} wide>
@@ -277,6 +314,26 @@ export default function QuizEditor() {
           slotProps={{ htmlInput: { min: 1, step: 1 } }}
           sx={{ width: 220 }}
         />
+        <TextField
+          select
+          label="Szint"
+          value={targetDifficulty}
+          onChange={(event) => {
+            changed()
+            setTargetDifficulty(Number(event.target.value))
+          }}
+          error={quizErrors.some((e) => e.field === 'difficulty')}
+          sx={{ width: 220 }}
+        >
+          {difficulties.map((d) => {
+            const quizThere = otherQuizzes.find((quiz) => quiz.difficulty === d)
+            return (
+              <MenuItem key={d} value={d}>
+                {quizThere ? `${d} (foglalt: ${quizThere.name})` : d}
+              </MenuItem>
+            )
+          })}
+        </TextField>
       </Stack>
       <Typography variant="caption" color="text.secondary">
         A listákat (válaszlehetőségek, több helyes válasz) pontosvesszővel válaszd el, pl. „Théba; Memphisz”. Az üres idő az alapidőt jelenti.
@@ -309,12 +366,37 @@ export default function QuizEditor() {
         <Button variant="outlined" onClick={addRow}>
           + Új sor
         </Button>
-        <Button variant="contained" onClick={save} disabled={saving}>
+        <Button variant="contained" onClick={() => save()} disabled={saving}>
           Mentés
         </Button>
         {saved && <Alert severity="success">Mentve.</Alert>}
         {saveFailed && <Alert severity="error">Nem sikerült menteni.</Alert>}
+        {!isNew && (
+          <Button color="error" onClick={() => setConfirm('delete')} sx={{ ml: 'auto !important' }}>
+            Kvíz törlése
+          </Button>
+        )}
+        {deleteFailed && <Alert severity="error">Nem sikerült törölni.</Alert>}
       </Stack>
+
+      <ConfirmDialog
+        open={confirm === 'overwrite'}
+        title="Foglalt szint"
+        confirmLabel="Felülírás"
+        onConfirm={() => save(true)}
+        onCancel={() => setConfirm(undefined)}
+      >
+        A(z) {targetDifficulty}. szinten már van kvíz{occupant && <>: „{occupant.name}”</>}. Felülírod? A régi kvíz elvész.
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={confirm === 'delete'}
+        title="Kvíz törlése"
+        confirmLabel="Törlés"
+        onConfirm={remove}
+        onCancel={() => setConfirm(undefined)}
+      >
+        Biztosan törlöd a(z) {difficulty}. szint kvízét („{name}”)? Ez nem vonható vissza.
+      </ConfirmDialog>
     </Screen>
   )
 }
