@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router'
-import { Alert, Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography } from '@mui/material'
+import { Alert, alpha, Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography, useTheme } from '@mui/material'
 import { fetchQuestions, fetchSubjects, saveResult, type NewResult } from '../api.ts'
 import {
   answer,
@@ -8,8 +8,11 @@ import {
   currentBlock,
   isPassed,
   next,
+  pair,
   startPractice,
   tick,
+  unpair,
+  type Block,
   type BlockQuestion,
   type PracticeResult,
   type PracticeState,
@@ -105,7 +108,7 @@ export default function Practice() {
   if (state.blocks.length === 0) {
     return (
       <Screen title="Gyakorlás">
-        <Alert severity="info">Ebben a tartományban nincs elég igaz–hamis kérdés; a szópárosítás hamarosan érkezik.</Alert>
+        <Alert severity="info">Ebben a tartományban nincs elég kitölthető kérdés.</Alert>
       </Screen>
     )
   }
@@ -143,20 +146,29 @@ export default function Practice() {
       <Stack spacing={1.25} sx={{ px: 2, py: 2, flex: 1, maxWidth: 600, width: '100%', mx: 'auto' }}>
         <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: 0.5 }}>
           <Typography variant="h3" component="h1">
-            Igaz vagy hamis?
+            {block.type === 'word-matching' ? 'Párosítsd össze!' : 'Igaz vagy hamis?'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {subjectName} · {state.blockIndex + 1}/{state.blocks.length}
           </Typography>
         </Stack>
-        {block.questions.map((entry, i) => (
-          <Statement
-            key={`${state.blockIndex}-${i}`}
-            entry={entry}
-            closed={block.closed}
-            onAnswer={(value) => setState((s) => s && answer(s, i, value))}
+        {block.type === 'word-matching' ? (
+          <WordMatching
+            key={state.blockIndex}
+            block={block}
+            onPair={(word, meaning) => setState((s) => s && pair(s, word, meaning))}
+            onUnpair={(word) => setState((s) => s && unpair(s, word))}
           />
-        ))}
+        ) : (
+          block.questions.map((entry, i) => (
+            <Statement
+              key={`${state.blockIndex}-${i}`}
+              entry={entry}
+              closed={block.closed}
+              onAnswer={(value) => setState((s) => s && answer(s, i, value))}
+            />
+          ))
+        )}
       </Stack>
 
       <Box
@@ -187,6 +199,11 @@ export default function Practice() {
             >
               {state.result ? 'Eredmény' : 'Következő'}
             </Button>
+          ) : block.type === 'word-matching' ? (
+            // A word-matching Block is scored as soon as every word is paired.
+            <Typography color="text.secondary" sx={{ flex: 1, minHeight: 48, display: 'flex', alignItems: 'center' }}>
+              Koppints egy szóra, majd a párjára.
+            </Typography>
           ) : (
             <Button variant="contained" fullWidth onClick={() => setState((s) => s && closeBlock(s))}>
               Kész
@@ -240,6 +257,118 @@ function Statement({ entry, closed, onAnswer }: { entry: BlockQuestion; closed: 
         })}
       </Stack>
     </Paper>
+  )
+}
+
+type Side = 'word' | 'meaning'
+
+/**
+ * A word-matching Block: the English words on the left, their meanings shuffled on the right.
+ * Two taps make a pair, starting on either side; tapping a paired item takes its pair apart.
+ * Once scored, each pair turns green or red; an unpaired item (time ran out) is red.
+ */
+function WordMatching({ block, onPair, onUnpair }: {
+  block: Block
+  onPair: (word: number, meaning: number) => void
+  onUnpair: (word: number) => void
+}) {
+  const [selected, setSelected] = useState<{ side: Side; index: number }>()
+  const wordOf = (meaning: number) => {
+    const word = block.questions.findIndex((entry) => entry.paired === meaning)
+    return word < 0 ? undefined : word
+  }
+
+  const tap = (side: Side, index: number) => {
+    if (block.closed) return
+    const pairedWord = side === 'word' ? (block.questions[index].paired === undefined ? undefined : index) : wordOf(index)
+    if (pairedWord !== undefined) {
+      onUnpair(pairedWord)
+      setSelected(undefined)
+    } else if (!selected || selected.side === side) {
+      setSelected(selected?.index === index && selected.side === side ? undefined : { side, index })
+    } else {
+      onPair(side === 'word' ? index : selected.index, side === 'word' ? selected.index : index)
+      setSelected(undefined)
+    }
+  }
+
+  const tile = (side: Side, index: number, text: string, word: number | undefined) => (
+    <Tile
+      key={`${side}-${index}`}
+      text={text}
+      pairNumber={word === undefined ? undefined : word + 1}
+      tone={!block.closed ? undefined : word !== undefined && block.questions[word].correct ? 'success' : 'error'}
+      selected={selected?.side === side && selected.index === index}
+      onClick={() => tap(side, index)}
+    />
+  )
+
+  return (
+    <Stack direction="row" spacing={1.25}>
+      <Stack spacing={1.25} sx={{ flex: 1, minWidth: 0 }}>
+        {block.questions.map((entry, i) =>
+          tile('word', i, entry.question.text, entry.paired === undefined ? undefined : i),
+        )}
+      </Stack>
+      <Stack spacing={1.25} sx={{ flex: 1, minWidth: 0 }}>
+        {block.meaningOrder!.map((meaning) => tile('meaning', meaning, block.questions[meaning].question.answer[0], wordOf(meaning)))}
+      </Stack>
+    </Stack>
+  )
+}
+
+/** One word or meaning: a paired one shows its pair's number and colour, a scored one green or red. */
+function Tile({ text, pairNumber, tone, selected, onClick }: {
+  text: string
+  pairNumber?: number
+  tone?: 'success' | 'error'
+  selected: boolean
+  onClick: () => void
+}) {
+  const theme = useTheme()
+  const { pairs } = theme.palette
+  const pairColor = pairNumber === undefined ? undefined : pairs[(pairNumber - 1) % pairs.length]
+  const color = tone ? theme.palette[tone].main : selected ? theme.palette.primary.main : pairColor ?? theme.palette.divider
+
+  return (
+    <ButtonBase
+      onClick={onClick}
+      aria-pressed={selected}
+      sx={{
+        minHeight: 56,
+        px: 1.25,
+        py: 1,
+        gap: 1,
+        justifyContent: 'flex-start',
+        textAlign: 'left',
+        borderRadius: 1,
+        border: `1.5px solid ${color}`,
+        bgcolor: tone ? theme.palette[tone].soft : selected ? theme.palette.primary.soft : pairColor ? alpha(pairColor, 0.1) : 'background.paper',
+        boxShadow: selected ? `0 0 0 3px ${theme.palette.primary.soft}` : '0 1px 2px rgba(16,24,40,0.06)',
+        transition: 'background-color 120ms, border-color 120ms, box-shadow 120ms',
+        ...(tone && { pointerEvents: 'none' }),
+      }}
+    >
+      {pairNumber !== undefined && (
+        <Box
+          sx={{
+            flex: 'none',
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'common.white',
+            bgcolor: tone ? theme.palette[tone].main : pairColor,
+          }}
+        >
+          {pairNumber}
+        </Box>
+      )}
+      <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{text}</Typography>
+    </ButtonBase>
   )
 }
 

@@ -9,6 +9,13 @@ declare module '@mui/material/styles' {
   interface SimplePaletteColorOptions {
     soft?: string
   }
+  interface Palette {
+    /** Colours telling the pairs of an open word-matching Block apart; never green or red. */
+    pairs: string[]
+  }
+  interface PaletteOptions {
+    pairs?: string[]
+  }
 }
 
 const radius = 12
@@ -28,6 +35,7 @@ export const theme = createTheme({
     // Answer feedback: correct is green, wrong (or missing) is red.
     success: { main: '#1f8a4c', soft: '#e8f5ec', contrastText: '#fff' },
     error: { main: '#c2413b', soft: '#fbecea', contrastText: '#fff' },
+    pairs: ['#7c5cff', '#f59e0b', '#0ea5e9', '#ec4899', '#475569'],
     text: { primary: '#1f2933', secondary: '#6b7480' },
     divider: '#dcdfe3',
     background: { default: '#fff', paper: '#fff' },

@@ -41,10 +41,13 @@ export interface PracticeInput {
 
 export type TrueFalseAnswer = 'true' | 'false'
 
-/** One statement of a true–false Block and the Participant's answer to it. */
+/** One Question of a Block and the Participant's answer to it: a true–false statement, or a word-matching pair. */
 export interface BlockQuestion {
   question: PracticeQuestion
+  /** True–false: the answer given. */
   given?: TrueFalseAnswer
+  /** Word-matching: the Block index of the Question whose meaning is paired with this word. */
+  paired?: number
   /** Set when the Block is closed; a missing answer is wrong. */
   correct?: boolean
 }
@@ -55,6 +58,11 @@ export interface Block {
   questions: BlockQuestion[]
   /** Closed Blocks are scored and can no longer be answered. */
   closed: boolean
+  /**
+   * Word-matching: the Block indices of the Questions in the order their meanings are shown.
+   * The words are shown in Block order, so the two columns are shuffled apart.
+   */
+  meaningOrder?: number[]
 }
 
 /** The scores of a finished Practice: what its Result records, apart from who, what and when. */
@@ -91,7 +99,7 @@ export function startPractice(input: PracticeInput): PracticeState {
   const selected = select(input)
   const timeLimitSeconds = selected.reduce((sum, question) => sum + question.time, 0)
   return {
-    blocks: toBlocks(selected),
+    blocks: toBlocks(selected, input.random),
     blockIndex: 0,
     timeLimitSeconds,
     remainingSeconds: timeLimitSeconds,
@@ -111,9 +119,36 @@ export function answer(state: PracticeState, questionIndex: number, value: TrueF
   return withCurrentBlock(state, { ...block, questions })
 }
 
-/** Closes and scores the current Block; after the last one the Practice has its Result. */
+/**
+ * Pairs a word of the current word-matching Block with a meaning, both given by their Question's index
+ * in the Block. A pair either one was in comes apart. Once every word is paired, the Block is scored.
+ */
+export function pair(state: PracticeState, word: number, meaning: number): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'word-matching') return state
+  const questions = block.questions.map((entry, i) =>
+    i === word ? { ...entry, paired: meaning } : entry.paired === meaning ? { ...entry, paired: undefined } : entry,
+  )
+  return closeBlock(withCurrentBlock(state, { ...block, questions }))
+}
+
+/** Takes the pair of a word of the current word-matching Block apart; a scored Block ignores it. */
+export function unpair(state: PracticeState, word: number): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'word-matching') return state
+  const questions = block.questions.map((entry, i) => (i === word ? { ...entry, paired: undefined } : entry))
+  return withCurrentBlock(state, { ...block, questions })
+}
+
+const isFullyPaired = (block: Block) => block.questions.every((entry) => entry.paired !== undefined)
+
+/**
+ * Closes and scores the current Block; after the last one the Practice has its Result.
+ * A word-matching Block closes only once every word is paired.
+ */
 export function closeBlock(state: PracticeState): PracticeState {
-  if (currentBlock(state).closed) return state
+  const block = currentBlock(state)
+  if (block.closed || (block.type === 'word-matching' && !isFullyPaired(block))) return state
   const closed = scoreCurrentBlock(state)
   if (state.blockIndex < state.blocks.length - 1) return closed
   const elapsedSeconds = Math.min(Math.round(elapsedMs(state) / 1000), state.timeLimitSeconds)
@@ -136,7 +171,10 @@ const elapsedMs = (state: PracticeState) => state.clock() - state.startedAt
 
 function scoreCurrentBlock(state: PracticeState): PracticeState {
   const block = currentBlock(state)
-  const questions = block.questions.map((entry) => ({ ...entry, correct: entry.given === entry.question.answer[0] }))
+  const questions = block.questions.map((entry, i) => ({
+    ...entry,
+    correct: block.type === 'word-matching' ? entry.paired === i : entry.given === entry.question.answer[0],
+  }))
   return withCurrentBlock(state, { ...block, questions, closed: true })
 }
 
@@ -164,24 +202,80 @@ const withCurrentBlock = (state: PracticeState, block: Block): PracticeState => 
 
 /**
  * Picks the Practice's Questions at random, without repetition, up to the Subject's maximum,
- * from the usable types only. Word-matching Blocks don't exist yet (ticket 04), so those are left out.
+ * from the usable types only. An English or Hungarian word is shown only once, so a word-matching
+ * Question repeating an earlier pick's word is left out. A word-matching Block needs at least 2 pairs, so a lonely
+ * word-matching Question is swapped for another playable Question of the range, or left out if there is none.
  */
 function select({ questions, settings, random }: PracticeInput): PracticeQuestion[] {
   const counts: Partial<Record<QuestionType, number>> = {}
   for (const { type } of questions) counts[type] = (counts[type] ?? 0) + 1
-  const types: QuestionType[] = usableTypes(counts).filter((type) => type !== 'word-matching')
-  const candidates = questions.filter((question) => types.includes(question.type))
-  return shuffle(candidates, random).slice(0, settings.max_questions)
+  const types = usableTypes(counts)
+  const candidates = withoutRepeatedWords(
+    shuffle(
+      questions.filter((question) => types.includes(question.type)),
+      random,
+    ),
+  )
+  const selected = candidates.slice(0, settings.max_questions)
+  const wordMatching = selected.filter((question) => question.type === 'word-matching')
+  if (wordMatching.length !== 1) return selected
+  const others = selected.filter((question) => question !== wordMatching[0])
+  const swap = candidates.slice(settings.max_questions).find((question) => question.type !== 'word-matching')
+  return swap ? [...others, swap] : others
 }
 
-/** Groups the selected Questions into Blocks of a whole Block's size; the last one may be shorter. */
-function toBlocks(questions: PracticeQuestion[]): Block[] {
-  const size = blockSizes['true-false']!
+/** Keeps the first word-matching Question of each English and each Hungarian word, ignoring case and surrounding spaces. */
+function withoutRepeatedWords(questions: PracticeQuestion[]): PracticeQuestion[] {
+  const seen = new Set<string>()
+  const normalized = (word: string) => word.trim().toLowerCase()
+  return questions.filter((question) => {
+    if (question.type !== 'word-matching') return true
+    const english = `en:${normalized(question.text)}`
+    const hungarian = `hu:${normalized(question.answer[0])}`
+    if (seen.has(english) || seen.has(hungarian)) return false
+    seen.add(english).add(hungarian)
+    return true
+  })
+}
+
+/**
+ * Groups the selected Questions into same-type Blocks of a whole Block's size; the last of a type may be
+ * shorter. A word-matching Block needs at least 2 pairs, so a single pair left over takes one more from the
+ * Block before it. Each next Block's type is picked at random, weighted by the Questions left of each type.
+ */
+function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] {
+  const queues = (Object.entries(blockSizes) as [QuestionType, number][]).map(([type, size]) => {
+    const ofType = questions.filter((question) => question.type === type)
+    const sizes = Array.from({ length: Math.ceil(ofType.length / size) }, (_, i) => Math.min(size, ofType.length - i * size))
+    if (type === 'word-matching' && sizes.length > 1 && sizes.at(-1) === 1) {
+      sizes[sizes.length - 2]--
+      sizes[sizes.length - 1]++
+    }
+    let offset = 0
+    return sizes.map((count): Block => {
+      const block: Block = { type, questions: ofType.slice(offset, offset + count).map((question) => ({ question })), closed: false }
+      if (type === 'word-matching') block.meaningOrder = shuffledApart([...block.questions.keys()], random)
+      offset += count
+      return block
+    })
+  })
+
   const blocks: Block[] = []
-  for (let i = 0; i < questions.length; i += size) {
-    blocks.push({ type: 'true-false', questions: questions.slice(i, i + size).map((question) => ({ question })), closed: false })
+  const left = (queue: Block[]) => queue.reduce((sum, block) => sum + block.questions.length, 0)
+  for (let total = questions.length; total > 0; ) {
+    let pick = random() * total
+    const queue = queues.find((q) => (pick -= left(q)) < 0) ?? queues.findLast((q) => q.length > 0)!
+    const block = queue.shift()!
+    blocks.push(block)
+    total -= block.questions.length
   }
   return blocks
+}
+
+/** Shuffles the indices so that the order always differs from the original one, rotating it if the draw left it in place. */
+function shuffledApart(indices: number[], random: () => number): number[] {
+  const order = shuffle(indices, random)
+  return order.every((index, i) => index === indices[i]) ? [...order.slice(1), order[0]] : order
 }
 
 /** Fisher–Yates shuffle into a new array. */
