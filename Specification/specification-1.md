@@ -115,7 +115,7 @@ Minden tantárgy mappájában van egy `subject.json`, amely a tantárgy adatait 
 
 - Egyszerre **3 állítás** látható (ha nincs elég kérdés, kevesebb lehet).
 - A **Kész** gomb lezárja a blokkot. Nem kötelező mindháromra válaszolni; a hiányzó válasz hibás.
-- Lezáráskor azonnal látható, mely válasz helyes, mely hibás, és mi lett volna a helyes válasz.
+- Lezáráskor azonnal látható, mely válasz helyes és mely hibás. A helyes választ a rendszer szövegesen nem írja ki. Hibás vagy hiányzó válasznál az állítás kerete és háttere piros, és a helyes gomb (Igaz vagy Hamis) jelölve látszik, szintén pirosan. Helyes válasznál a megjelölt gomb és az állítás zöld.
 - **Felolvasás:** mindig a **legfelső még megválaszolatlan** állítás hangzik el, ha van `speak_text`-je. Minden állítás legfeljebb egyszer olvasódik fel automatikusan, akkor, amikor először lesz a legfelső megválaszolatlan. Ha nincs `speak_text`-je, nincs felolvasás, és a rendszer nem ugrik az alatta lévőre.
 - Az állítás szövegére koppintva az újra felolvasható (ha van `speak_text`).
 - A válasz nem hangzik el.

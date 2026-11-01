@@ -56,7 +56,7 @@ Minden adat JSON-fájlként tárolódik a szerveren, így minden eszköz ugyanaz
 
 20. Mint Participant, egyszerre legfeljebb 3 állítást akarok látni, mindegyiknél Igaz és Hamis választással.
 21. Mint Participant, a Kész gombbal le akarom zárni a Blockot akkor is, ha nem válaszoltam mindenre; a hiányzó válasz hibásnak számít.
-22. Mint Participant, lezáráskor látni akarom, mely válaszom helyes, mely hibás, és mi lett volna a helyes válasz.
+22. Mint Participant, lezáráskor látni akarom, mely válaszom helyes és mely hibás. Hibás vagy hiányzó válasznál az állítás piros keretet és hátteret kap, és a helyes gomb pirosan jelölve látszik, szöveges magyarázat nélkül.
 23. Mint Participant, azt akarom, hogy a legfelső még megválaszolatlan állítás automatikusan felolvasódjon, ha van felolvasási nyelve.
 24. Mint Participant, egy állítást legfeljebb egyszer akarok automatikusan hallani, akkor is, ha össze-vissza válaszolok.
 25. Mint Participant, ha a legfelső megválaszolatlan állításnak nincs felolvasási nyelve, csendet akarok, nem az alatta lévő felolvasását.
