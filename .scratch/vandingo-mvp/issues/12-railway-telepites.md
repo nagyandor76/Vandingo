@@ -11,5 +11,5 @@ Spec: [../spec.md](../spec.md) – User Stories 63–65; [ADR 0001](../../../doc
 - [ ] Az alkalmazás nyilvános URL-en elérhető telefonról
 - [ ] Az adatkönyvtár a Volume-ra mutat
 - [ ] Újratelepítés után a szerkesztett Quizek és a Resultok megmaradnak
-- [ ] A Railway aktuális ára és csomagkorlátai ellenőrizve
-- [ ] A telepítés lépései le vannak írva a repóban
+- [x] A Railway aktuális ára és csomagkorlátai ellenőrizve
+- [x] A telepítés lépései le vannak írva a repóban ([docs/deployment.md](../../../docs/deployment.md))

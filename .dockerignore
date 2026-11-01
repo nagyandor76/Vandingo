@@ -1,0 +1,11 @@
+.git
+.scratch
+.vs
+**/bin
+**/obj
+**/node_modules
+src/Vandingo.Api/wwwroot
+data
+Trash
+tests
+Specification
