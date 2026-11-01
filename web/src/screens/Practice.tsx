@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router'
 import { Alert, alpha, Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography, useTheme } from '@mui/material'
-import { fetchQuestions, fetchSubjects, saveResult, type NewResult } from '../api.ts'
+import { fetchQuestions, fetchQuizzes, fetchSubjects, saveResult, type NewResult } from '../api.ts'
+import { quizNamesOf } from '../resultLabels.ts'
 import { playBlockSound, speak, stopSpeaking, unlockAudio } from '../audio.ts'
 import {
   answer,
@@ -43,16 +44,20 @@ export default function Practice() {
   const [state, setState] = useState<PracticeState>()
   const [loadError, setLoadError] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>()
+  const quizNames = useRef<{ quizNameFrom?: string; quizNameTo?: string }>({})
   const savedResult = useRef<PracticeResult>(undefined)
 
   useEffect(() => {
     if (!complete) return
     let current = true
-    Promise.all([fetchSubjects(), fetchQuestions(subject, from, to)]).then(
-      ([subjects, questions]) => {
+    // The names are best effort: a Result without them is still a Result.
+    const names = fetchQuizzes(subject).then((quizzes) => quizNamesOf(quizzes, from, to), () => ({}))
+    Promise.all([fetchSubjects(), fetchQuestions(subject, from, to), names]).then(
+      ([subjects, questions, quizNamesAtStart]) => {
         const settings = subjects.find((s) => s.key === subject)
         if (!current) return
         if (!settings) return setLoadError(true)
+        quizNames.current = quizNamesAtStart
         setSubjectName(settings.name)
         setAutoAdvance(settings.auto_advance)
         setState(startPractice({ questions, settings, random: Math.random, clock: Date.now }))
@@ -99,7 +104,7 @@ export default function Practice() {
   const save = useCallback(() => {
     if (!result) return
     setSaveStatus('saving')
-    const submitted: NewResult = { participant, subject, difficultyFrom: from, difficultyTo: to, ...result }
+    const submitted: NewResult = { participant, subject, difficultyFrom: from, difficultyTo: to, ...quizNames.current, ...result }
     saveResult(submitted).then(
       () => setSaveStatus('saved'),
       () => setSaveStatus('failed'),
