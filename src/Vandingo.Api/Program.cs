@@ -68,6 +68,7 @@ api.MapGet("/results", (string participant, int? limit, ResultStore results) =>
     results.List(participant, Math.Max(limit ?? 10, 0)));
 api.MapGet("/results/{id}", (string id, ResultStore results) =>
     results.Find(id) is { } result ? Results.Ok(result) : Results.NotFound());
+api.MapPost("/seed", (DataPaths paths) => SeedImport.CopyMissing(paths));
 api.MapGet("/export", (DataPaths paths) => DataExport.Download(paths));
 api.MapFallback(() => Results.NotFound());
 
