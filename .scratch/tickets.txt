@@ -1,0 +1,16 @@
+Kész (9)
+vandingo-mvp   01  done    01: Alapváz – üres alkalmazás, amely elindul
+vandingo-mvp   02  done    02: A Practice indítóképernyője
+vandingo-mvp   03  done    03: Igaz–hamis Practice az elejétől a Resultig
+vandingo-mvp   04  done    04: Szópárosító Blockok, vegyes Practice
+vandingo-mvp   05  done    05: Felolvasás, hangjelzések, automatikus továbblépés
+vandingo-mvp   06  done    06: Eredmény böngésző
+vandingo-mvp   07  done    07: Szerkesztő – Quiz megnyitása, létrehozása és mentése
+vandingo-mvp   10  done    10: Beállítások – Subject létrehozása és beállításai
+vandingo-mvp   13  done    13: Design-alap – téma és közös képernyőkeret
+
+Nyitott (4)
+vandingo-mvp   08  ready-for-agent  08: Szerkesztő – beillesztés Excelből  ← indítható
+vandingo-mvp   09  ready-for-agent  09: Szerkesztő – szint módosítása, felülírás, Quiz törlése  ← indítható
+vandingo-mvp   11  ready-for-agent  11: Adatok letöltése ZIP-ben  ← indítható
+vandingo-mvp   12  ready-for-human  12: Telepítés Railway-re  ← indítható

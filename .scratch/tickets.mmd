@@ -1,0 +1,34 @@
+flowchart LR
+  subgraph vandingo_mvp_feature["vandingo-mvp"]
+    vandingo_mvp_1["01: Alapváz – üres alkalmazás, amely elindul<br/><small>done</small>"]:::done
+    vandingo_mvp_2["02: A Practice indítóképernyője<br/><small>done</small>"]:::done
+    vandingo_mvp_3["03: Igaz–hamis Practice az elejétől a Resultig<br/><small>done</small>"]:::done
+    vandingo_mvp_4["04: Szópárosító Blockok, vegyes Practice<br/><small>done</small>"]:::done
+    vandingo_mvp_5["05: Felolvasás, hangjelzések, automatikus továbblépés<br/><small>done</small>"]:::done
+    vandingo_mvp_6["06: Eredmény böngésző<br/><small>done</small>"]:::done
+    vandingo_mvp_7["07: Szerkesztő – Quiz megnyitása, létrehozása és mentése<br/><small>done</small>"]:::done
+    vandingo_mvp_8["08: Szerkesztő – beillesztés Excelből<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_9["09: Szerkesztő – szint módosítása, felülírás, Quiz törlése<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_10["10: Beállítások – Subject létrehozása és beállításai<br/><small>done</small>"]:::done
+    vandingo_mvp_11["11: Adatok letöltése ZIP-ben<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    vandingo_mvp_12["12: Telepítés Railway-re<br/><small>ready-for-human</small>"]:::ready_for_human
+    vandingo_mvp_13["13: Design-alap – téma és közös képernyőkeret<br/><small>done</small>"]:::done
+  end
+  vandingo_mvp_1 --> vandingo_mvp_2
+  vandingo_mvp_2 --> vandingo_mvp_3
+  vandingo_mvp_3 --> vandingo_mvp_4
+  vandingo_mvp_4 --> vandingo_mvp_5
+  vandingo_mvp_3 --> vandingo_mvp_6
+  vandingo_mvp_1 --> vandingo_mvp_7
+  vandingo_mvp_7 --> vandingo_mvp_8
+  vandingo_mvp_7 --> vandingo_mvp_9
+  vandingo_mvp_1 --> vandingo_mvp_10
+  vandingo_mvp_1 --> vandingo_mvp_11
+  vandingo_mvp_1 --> vandingo_mvp_12
+  vandingo_mvp_1 --> vandingo_mvp_13
+  classDef done fill:#e8f5ec,stroke:#1f8a4c,color:#1f2933
+  classDef ready_for_agent fill:#e0f2fe,stroke:#0ea5e9,color:#1f2933
+  classDef ready_for_human fill:#fef3c7,stroke:#f59e0b,color:#1f2933
+  classDef needs_triage fill:#f3f4f6,stroke:#6b7480,color:#1f2933
+  classDef needs_info fill:#fbecea,stroke:#c2413b,color:#1f2933
+  classDef wontfix fill:#f3f4f6,stroke:#9ca3af,color:#6b7480,stroke-dasharray:4

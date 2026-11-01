@@ -1,6 +1,8 @@
 // Lists the tickets under .scratch/<feature>/issues/ with their status, read from each file's YAML frontmatter.
 //
-//   dotnet run scripts/tickets.cs                    every ticket
+//   dotnet run scripts/tickets.cs                    writes .scratch/tickets.txt (done and open listed apart)
+//                                                    and .scratch/tickets.mmd (Mermaid graph of every ticket)
+//   dotnet run scripts/tickets.cs -- --list          every ticket, on the console
 //   dotnet run scripts/tickets.cs -- --ready         only open tickets whose blockers are all done
 //   dotnet run scripts/tickets.cs -- --json          machine-readable
 //   dotnet run scripts/tickets.cs -- --mermaid       dependency graph as a Mermaid flowchart, coloured by status
@@ -57,15 +59,46 @@ else if (args.Contains("--mermaid"))
 {
     Console.WriteLine(Mermaid(shown));
 }
+else if (args.Contains("--list") || args.Contains("--ready"))
+{
+    foreach (var line in Lines(shown)) Console.WriteLine(line);
+}
+else if (args.Length > 0)
+{
+    Console.Error.WriteLine($"Unknown option: {string.Join(' ', args)}. See the top of scripts/tickets.cs.");
+    return 1;
+}
 else
 {
-    var statusWidth = Math.Max(6, shown.Select(t => t.Status.Length).DefaultIfEmpty(0).Max());
-    foreach (var t in shown)
+    var done = tickets.Where(t => t.Status == "done").ToList();
+    var open = tickets.Where(t => t.Status != "done").ToList();
+    string[] text =
+    [
+        $"Kész ({done.Count})",
+        .. Lines(done),
+        "",
+        $"Nyitott ({open.Count})",
+        .. Lines(open),
+    ];
+    var textFile = Path.Combine(root, "tickets.txt");
+    var mermaidFile = Path.Combine(root, "tickets.mmd");
+    File.WriteAllText(textFile, string.Join('\n', text) + '\n');
+    File.WriteAllText(mermaidFile, Mermaid(tickets) + '\n');
+    Console.WriteLine($"{Path.GetRelativePath(Environment.CurrentDirectory, textFile)}: {done.Count} kész, {open.Count} nyitott");
+    Console.WriteLine($"{Path.GetRelativePath(Environment.CurrentDirectory, mermaidFile)}: {tickets.Count} ticket");
+}
+return 0;
+
+/// One line per ticket: feature, number, status, title, and what it waits on or that it can start.
+IEnumerable<string> Lines(List<Ticket> list)
+{
+    var statusWidth = Math.Max(6, list.Select(t => t.Status.Length).DefaultIfEmpty(0).Max());
+    return list.Select(t =>
     {
         var waitingOn = WaitingOn(t);
         var note = waitingOn.Count > 0 ? $"  (vár: {string.Join(", ", waitingOn)})" : IsReady(t) ? "  ← indítható" : "";
-        Console.WriteLine($"{t.Feature,-14} {t.Number:00}  {t.Status.PadRight(statusWidth)}  {t.Title}{note}");
-    }
+        return $"{t.Feature,-14} {t.Number:00}  {t.Status.PadRight(statusWidth)}  {t.Title}{note}";
+    });
 }
 
 Ticket Read(string feature, string path)
