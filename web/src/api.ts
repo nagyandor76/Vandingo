@@ -93,6 +93,9 @@ export const createSubject = (key: string, name: string) => send('POST', '/api/s
 export const saveSubjectSettings = (key: string, settings: Pick<Subject, 'max_questions' | 'auto_advance'>) =>
   send('PUT', `/api/subjects/${encodeURIComponent(key)}`, settings)
 
+/** Downloads the whole data directory as a dated ZIP (a plain link, so it works on every device). */
+export const exportUrl = '/api/export'
+
 /** A Question as stored in its Quiz: `time` is missing when the Quiz default applies. */
 export interface Question extends Omit<PracticeQuestion, 'time'> {
   time?: number
