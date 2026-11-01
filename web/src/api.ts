@@ -125,8 +125,8 @@ export async function fetchQuiz(subject: string, difficulty: number): Promise<Qu
 export const saveQuiz = (
   subject: string,
   difficulty: number,
-  // A missing default time is sent as null, so the server's check reports it.
-  quiz: Pick<Quiz, 'name' | 'questions'> & { default_time: number | null },
+  // A missing name or default time is sent as null, so the server's check reports it.
+  quiz: Pick<Quiz, 'questions'> & { name: string | null; default_time: number | null },
   { originalDifficulty, overwrite = false }: { originalDifficulty?: number; overwrite?: boolean } = {},
 ) => {
   const query = new URLSearchParams()
