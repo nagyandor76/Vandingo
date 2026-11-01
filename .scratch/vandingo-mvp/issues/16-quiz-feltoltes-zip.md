@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [10, 11]
 ---
 
@@ -22,3 +22,7 @@ Spec: [../spec.md](../spec.md) – User Stories 69–70
 - [x] API-teszt: az `GET /api/export` ZIP-je visszatölthető, és a Resultokat nem érinti
 - [x] API-teszt: létező Subject beállításai a ZIP `subject.json`-je ellenére sem változnak
 - [x] A felület mutatja a hibákat, rákérdez a felülírásra, és a végén összesít
+
+## Comments
+
+- 2026-11-01: Elkészült és a main-ben van: `POST /api/import`, API-tesztekkel. A review után a sérült ZIP-bejegyzés fájlonkénti 400, az idegen fájlokat kihagyja, a második `subject.json` hiba. A feltöltő felület (`ZipUpload.tsx`) böngészőben még nincs kipróbálva. Nincs méretkorlát a feltöltött ZIP-re.

@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [10]
 ---
 
@@ -14,3 +14,7 @@ Spec: [../spec.md](../spec.md) – User Story 71
 - [x] API-teszt: a szerkesztett (a forrástól eltérő) Quiz és a módosított Subject-beállítás nem íródik felül
 - [x] API-teszt: ha nincs új, a válasz üres lista, és semmi nem változik
 - [x] A felület kiírja az átvett Quizeket, vagy hogy nem volt új
+
+## Comments
+
+- 2026-11-01: Elkészült és a main-ben van: `POST /api/seed`, atomikus írással. Egy hibás forrás-JSON kimarad, a válasz nem jelzi. A gomb a Beállításokban böngészőben még nincs kipróbálva.

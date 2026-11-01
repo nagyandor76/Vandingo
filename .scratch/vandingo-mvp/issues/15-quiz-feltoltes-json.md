@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [9]
 ---
 
@@ -14,3 +14,7 @@ Spec: [../spec.md](../spec.md) – User Stories 67–68
 - [x] Ellenőrzési hibánál megjelennek a hibák, és a Quiz nem mentődik
 - [x] Nem JSON vagy `difficulty` nélküli fájlnál érthető hibaüzenet jelenik meg
 - [ ] Kézzel kipróbálva a repó egyik `Quizzes/` fájljával
+
+## Comments
+
+- 2026-11-01: Elkészült és a main-ben van. A fájl beolvasása külön modulban (`web/src/editor/upload.ts`) tesztelt, a mentés a meglévő végpontot használja. A felület (gomb, megerősítés, hibalista) böngészőben még nincs kipróbálva (ez a nyitott jelölőnégyzet).
