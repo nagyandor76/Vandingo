@@ -158,7 +158,7 @@ string Mermaid(List<Ticket> list)
     }
     lines.AddRange(
     [
-        "  classDef done fill:#e8f5ec,stroke:#1f8a4c,color:#1f2933",
+        "  classDef done fill:#50e55c,stroke:#1f8a4c,color:#1f2933",
         "  classDef ready_for_agent fill:#e0f2fe,stroke:#0ea5e9,color:#1f2933",
         "  classDef ready_for_human fill:#fef3c7,stroke:#f59e0b,color:#1f2933",
         "  classDef needs_triage fill:#f3f4f6,stroke:#6b7480,color:#1f2933",
