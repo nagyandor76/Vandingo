@@ -374,3 +374,70 @@ describe('usable types of a range', () => {
     expect(usableTypes({ 'true-false': 2, 'word-matching': 4 })).toEqual([])
   })
 })
+
+describe('reading aloud and Block scoring signals', () => {
+  /** Shuffles nothing, so the Questions keep the order they are given in. */
+  const inOrder = () => 0.999999
+  const spoken = (text: string): PracticeQuestion => ({ ...trueFalse(text), speak_text: 'hu-HU' })
+
+  it('reads aloud the topmost unanswered statement, each one at most once', () => {
+    let state = start([spoken('A'), spoken('B'), spoken('C')], { random: inOrder })
+    expect(state.speech).toMatchObject({ text: 'A', lang: 'hu-HU' })
+    const first = state.speech
+
+    state = answer(state, 1, 'true')
+    expect(state.speech).toBe(first)
+
+    state = answer(state, 0, 'true')
+    expect(state.speech).toMatchObject({ text: 'C', lang: 'hu-HU' })
+    const third = state.speech
+
+    state = answer(state, 0, 'false')
+    state = answer(state, 2, 'true')
+    expect(state.speech).toBe(third)
+  })
+
+  it('stays silent when the topmost unanswered statement has no speak_text, never reading the one below', () => {
+    let state = start([spoken('A'), trueFalse('B'), spoken('C')], { random: inOrder })
+
+    state = answer(state, 0, 'true')
+    expect(state.speech).toBeUndefined()
+
+    state = answer(state, 2, 'true')
+    expect(state.speech).toBeUndefined()
+  })
+
+  it('reads aloud the first statement of the next Block once the Participant moves on', () => {
+    let state = start([spoken('A'), spoken('B'), spoken('C'), spoken('D')], { random: inOrder })
+
+    state = next(closeBlock(state))
+    expect(state.speech).toMatchObject({ text: 'D' })
+  })
+
+  it('reads nothing aloud in a word-matching Block', () => {
+    const state = start(words(5).map((question) => ({ ...question, speak_text: 'en-GB' })))
+
+    expect(state.speech).toBeUndefined()
+  })
+
+  it('tells whether every answer of a scored Block was correct', () => {
+    let state = start(statements(6), { random: inOrder })
+    expect(currentBlock(state).allCorrect).toBeUndefined()
+
+    for (const i of [0, 1, 2]) state = answer(state, i, 'true')
+    state = closeBlock(state)
+    expect(currentBlock(state).allCorrect).toBe(true)
+
+    state = next(state)
+    state = answer(state, 0, 'false')
+    state = closeBlock(state)
+    expect(currentBlock(state).allCorrect).toBe(false)
+  })
+
+  it('tells whether every pair of a scored word-matching Block was correct', () => {
+    const pairAll = (meanings: number[]) => meanings.reduce((state, meaning, word) => pair(state, word, meaning), start(words(5)))
+
+    expect(currentBlock(pairAll([0, 1, 2, 3, 4])).allCorrect).toBe(true)
+    expect(currentBlock(pairAll([1, 0, 2, 3, 4])).allCorrect).toBe(false)
+  })
+})

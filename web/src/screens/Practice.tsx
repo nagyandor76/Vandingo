@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router'
 import { Alert, alpha, Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography, useTheme } from '@mui/material'
 import { fetchQuestions, fetchSubjects, saveResult, type NewResult } from '../api.ts'
+import { playBlockSound, speak, stopSpeaking, unlockAudio } from '../audio.ts'
 import {
   answer,
   closeBlock,
@@ -9,6 +10,7 @@ import {
   isPassed,
   next,
   pair,
+  speechOf,
   startPractice,
   tick,
   unpair,
@@ -22,6 +24,9 @@ import Screen from './Screen.tsx'
 
 type SaveStatus = 'saving' | 'saved' | 'failed'
 
+/** With the Subject's auto_advance on, how long a scored Block stays on screen. */
+const autoAdvanceMs = 2000
+
 /** One Practice, from the first Block to the summary. Leaving before the end saves nothing. */
 export default function Practice() {
   const [params] = useSearchParams()
@@ -33,6 +38,7 @@ export default function Practice() {
   const complete = Boolean(participant && subject && from && to)
 
   const [subjectName, setSubjectName] = useState('')
+  const [autoAdvance, setAutoAdvance] = useState(false)
   const [state, setState] = useState<PracticeState>()
   const [loadError, setLoadError] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>()
@@ -47,6 +53,7 @@ export default function Practice() {
         if (!current) return
         if (!settings) return setLoadError(true)
         setSubjectName(settings.name)
+        setAutoAdvance(settings.auto_advance)
         setState(startPractice({ questions, settings, random: Math.random, clock: Date.now }))
       },
       () => current && setLoadError(true),
@@ -62,6 +69,30 @@ export default function Practice() {
     const timer = setInterval(() => setState((s) => s && tick(s)), 250)
     return () => clearInterval(timer)
   }, [running])
+
+  // A new statement to read aloud is a new object; the same one is never read twice.
+  const speech = state?.speech
+  useEffect(() => {
+    if (speech) speak(speech)
+  }, [speech])
+  useEffect(() => stopSpeaking, [])
+  // Opened without the start screen (e.g. reloaded), sound is allowed only after a tap here.
+  useEffect(() => {
+    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    return () => window.removeEventListener('pointerdown', unlockAudio)
+  }, [])
+
+  // One sound per scored Block, cutting off any reading, then on to the next one if the Subject says so.
+  const blockIndex = state?.blockIndex
+  const allCorrect = state && state.blocks.length > 0 ? currentBlock(state).allCorrect : undefined
+  useEffect(() => {
+    if (allCorrect === undefined) return
+    stopSpeaking()
+    playBlockSound(allCorrect)
+    if (!autoAdvance) return
+    const timer = setTimeout(() => setState((s) => s && next(s)), autoAdvanceMs)
+    return () => clearTimeout(timer)
+  }, [blockIndex, allCorrect, autoAdvance])
 
   const result = state?.result
   const save = useCallback(() => {
@@ -118,7 +149,6 @@ export default function Practice() {
 
   const block = currentBlock(state)
   const progress = (state.blockIndex + (block.closed ? 1 : 0)) / state.blocks.length
-  const allCorrect = block.questions.every((entry) => entry.correct)
   const correctCount = block.questions.filter((entry) => entry.correct).length
 
   return (
@@ -217,9 +247,14 @@ export default function Practice() {
 
 const answerLabels: Record<TrueFalseAnswer, string> = { true: 'Igaz', false: 'Hamis' }
 
+function readAloud(question: BlockQuestion['question']) {
+  const speech = speechOf(question)
+  if (speech) speak(speech)
+}
+
 /**
- * One true–false statement. Once closed, a correct one turns green with the given answer marked;
- * a wrong or missing one turns red with the correct answer marked, in red.
+ * One true–false statement; tapping its text reads it aloud again. Once closed, a correct one turns green
+ * with the given answer marked; a wrong or missing one turns red with the correct answer marked, in red.
  */
 function Statement({ entry, closed, onAnswer }: { entry: BlockQuestion; closed: boolean; onAnswer: (value: TrueFalseAnswer) => void }) {
   const tone = !closed ? undefined : entry.correct ? 'success' : 'error'
@@ -227,7 +262,12 @@ function Statement({ entry, closed, onAnswer }: { entry: BlockQuestion; closed: 
 
   return (
     <Paper sx={{ p: 1.5, ...(tone && { borderColor: `${tone}.main`, bgcolor: `${tone}.soft` }) }}>
-      <Typography sx={{ fontWeight: 500, mb: 1.25 }}>{entry.question.text}</Typography>
+      <Typography
+        onClick={() => readAloud(entry.question)}
+        sx={{ fontWeight: 500, mb: 1.25, ...(entry.question.speak_text && { cursor: 'pointer' }) }}
+      >
+        {entry.question.text}
+      </Typography>
       <Stack direction="row" spacing={1}>
         {(['true', 'false'] as const).map((value) => {
           const selected = marked === value
@@ -265,6 +305,7 @@ type Side = 'word' | 'meaning'
 /**
  * A word-matching Block: the English words on the left, their meanings shuffled on the right.
  * Two taps make a pair, starting on either side; tapping a paired item takes its pair apart.
+ * Tapping an English word also reads it aloud; a Hungarian meaning stays silent.
  * Once scored, each pair turns green or red; an unpaired item (time ran out) is red.
  */
 function WordMatching({ block, onPair, onUnpair }: {
@@ -280,6 +321,7 @@ function WordMatching({ block, onPair, onUnpair }: {
 
   const tap = (side: Side, index: number) => {
     if (block.closed) return
+    if (side === 'word') readAloud(block.questions[index].question)
     const pairedWord = side === 'word' ? (block.questions[index].paired === undefined ? undefined : index) : wordOf(index)
     if (pairedWord !== undefined) {
       onUnpair(pairedWord)

@@ -50,6 +50,8 @@ export interface BlockQuestion {
   paired?: number
   /** Set when the Block is closed; a missing answer is wrong. */
   correct?: boolean
+  /** True–false: the statement has been the topmost unanswered one, so it is never read aloud automatically again. */
+  announced?: boolean
 }
 
 /** Same-type Questions shown and scored together. */
@@ -58,6 +60,8 @@ export interface Block {
   questions: BlockQuestion[]
   /** Closed Blocks are scored and can no longer be answered. */
   closed: boolean
+  /** Set when the Block is closed: every answer was correct. */
+  allCorrect?: boolean
   /**
    * Word-matching: the Block indices of the Questions in the order their meanings are shown.
    * The words are shown in Block order, so the two columns are shuffled apart.
@@ -80,6 +84,16 @@ export interface PracticeResult {
 /** Passed: every selected Question answered correctly. */
 export const isPassed = (result: PracticeResult) => result.correct === result.total
 
+/** Text to read aloud, in the language of its `speak_text`. */
+export interface Speech {
+  text: string
+  lang: string
+}
+
+/** How a Question's text is read aloud, or nothing if it has no `speak_text`. Its answer is never read. */
+export const speechOf = ({ text, speak_text }: PracticeQuestion): Speech | undefined =>
+  speak_text ? { text, lang: speak_text } : undefined
+
 export interface PracticeState {
   /** Every Block of the Practice, in the order they are shown. */
   blocks: Block[]
@@ -91,6 +105,11 @@ export interface PracticeState {
   result?: PracticeResult
   /** The Participant moved on from the last Block: show the summary. */
   finished: boolean
+  /**
+   * The latest statement to read aloud automatically. A new one is a new object; it stays the same object
+   * until the next one, so it is read only once. Unset while the topmost unanswered statement has no `speak_text`.
+   */
+  speech?: Speech
   clock: () => number
   startedAt: number
 }
@@ -98,7 +117,7 @@ export interface PracticeState {
 export function startPractice(input: PracticeInput): PracticeState {
   const selected = select(input)
   const timeLimitSeconds = selected.reduce((sum, question) => sum + question.time, 0)
-  return {
+  return announce({
     blocks: toBlocks(selected, input.random),
     blockIndex: 0,
     timeLimitSeconds,
@@ -106,7 +125,7 @@ export function startPractice(input: PracticeInput): PracticeState {
     finished: false,
     clock: input.clock,
     startedAt: input.clock(),
-  }
+  })
 }
 
 export const currentBlock = (state: PracticeState): Block => state.blocks[state.blockIndex]
@@ -116,7 +135,20 @@ export function answer(state: PracticeState, questionIndex: number, value: TrueF
   const block = currentBlock(state)
   if (block.closed) return state
   const questions = block.questions.map((entry, i) => (i === questionIndex ? { ...entry, given: value } : entry))
-  return withCurrentBlock(state, { ...block, questions })
+  return announce(withCurrentBlock(state, { ...block, questions }))
+}
+
+/**
+ * Reads aloud the topmost unanswered statement of the current true–false Block when it becomes the topmost
+ * for the first time; without a `speak_text` it stays silent rather than reading the one below.
+ */
+function announce(state: PracticeState): PracticeState {
+  const block = currentBlock(state)
+  if (!block || block.closed || block.type !== 'true-false') return state
+  const topIndex = block.questions.findIndex((entry) => entry.given === undefined)
+  if (topIndex < 0 || block.questions[topIndex].announced) return state
+  const questions = block.questions.map((entry, i) => (i === topIndex ? { ...entry, announced: true } : entry))
+  return { ...withCurrentBlock(state, { ...block, questions }), speech: speechOf(block.questions[topIndex].question) }
 }
 
 /**
@@ -175,14 +207,15 @@ function scoreCurrentBlock(state: PracticeState): PracticeState {
     ...entry,
     correct: block.type === 'word-matching' ? entry.paired === i : entry.given === entry.question.answer[0],
   }))
-  return withCurrentBlock(state, { ...block, questions, closed: true })
+  const allCorrect = questions.every((entry) => entry.correct)
+  return withCurrentBlock(state, { ...block, questions, closed: true, allCorrect })
 }
 
 /** Moves on from a closed Block to the next one, or to the summary once the Practice has its Result. */
 export function next(state: PracticeState): PracticeState {
   if (!currentBlock(state).closed) return state
   if (state.result) return { ...state, finished: true }
-  return { ...state, blockIndex: state.blockIndex + 1 }
+  return announce({ ...state, blockIndex: state.blockIndex + 1 })
 }
 
 /** Every selected Question counts; anything not scored correct is wrong. */
