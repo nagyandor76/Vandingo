@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
-import { createSubject, fetchSubjects, saveSubjectSettings, type Subject } from '../api.ts'
+import { createSubject, exportUrl, fetchSubjects, saveSubjectSettings, type Subject } from '../api.ts'
 import Screen from './Screen.tsx'
 
 /** Subjects' settings, and creating a new Subject. */
@@ -27,6 +27,20 @@ export default function Settings() {
         Új tantárgy
       </Typography>
       <NewSubject takenKeys={subjects?.map(({ key }) => key) ?? []} onCreated={load} />
+
+      <Typography variant="h3" component="h2" sx={{ pt: 1 }}>
+        Biztonsági mentés
+      </Typography>
+      <Paper sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          <Typography color="text.secondary">
+            Az összes tantárgy, kvíz és eredmény egyetlen ZIP-fájlban.
+          </Typography>
+          <Button variant="outlined" href={exportUrl} download>
+            Adatok letöltése
+          </Button>
+        </Stack>
+      </Paper>
     </Screen>
   )
 }
