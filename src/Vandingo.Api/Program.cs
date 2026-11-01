@@ -12,6 +12,7 @@ builder.Services.AddSingleton(paths);
 builder.Services.AddSingleton<SubjectStore>();
 builder.Services.AddSingleton<QuizStore>();
 builder.Services.AddSingleton<ResultStore>();
+builder.Services.AddSingleton<QuizImport>();
 
 var app = builder.Build();
 
@@ -69,6 +70,20 @@ api.MapGet("/results", (string participant, int? limit, ResultStore results) =>
 api.MapGet("/results/{id}", (string id, ResultStore results) =>
     results.Find(id) is { } result ? Results.Ok(result) : Results.NotFound());
 api.MapGet("/export", (DataPaths paths) => DataExport.Download(paths));
+api.MapPost("/import", async (HttpRequest request, bool? overwrite, QuizImport import) =>
+{
+    // The ZIP needs a seekable stream, so the body is buffered first.
+    using var body = new MemoryStream();
+    await request.Body.CopyToAsync(body);
+    body.Position = 0;
+    return import.Run(body, overwrite ?? false) switch
+    {
+        QuizImport.Invalid invalid => TypedResults.BadRequest(new { errors = invalid.Errors }),
+        QuizImport.Occupied occupied => TypedResults.Conflict(new { occupied = occupied.Quizzes }),
+        QuizImport.Imported done => Results.Ok(new { quizzes = done.Quizzes, subjects = done.Subjects }),
+        _ => Results.StatusCode(500),
+    };
+});
 api.MapFallback(() => Results.NotFound());
 
 app.MapFallbackToFile("index.html");

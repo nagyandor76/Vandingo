@@ -40,6 +40,11 @@ public sealed partial class SubjectStore(DataPaths paths)
         return created;
     }
 
+    public bool Exists(string key) => KeyPattern().IsMatch(key) && File.Exists(FileOf(key));
+
+    /// <summary>Stores an already checked Subject with its own settings (for an upload); its key must not be taken.</summary>
+    public void Import(Subject subject) => JsonFile.Write(FileOf(subject.Key), subject);
+
     /// <summary>Changes a Subject's settings, never its key or name; null if there is no such Subject.</summary>
     public Subject? Update(string key, SubjectSettings settings)
     {
