@@ -38,6 +38,9 @@ export interface NewResult extends PracticeResult {
   subject: string
   difficultyFrom: number
   difficultyTo: number
+  /** The Quiz names at completion; Results from before they were recorded have none. */
+  quizNameFrom?: string
+  quizNameTo?: string
 }
 
 export async function saveResult(result: NewResult): Promise<void> {
