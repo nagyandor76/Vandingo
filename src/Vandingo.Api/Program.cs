@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Vandingo.Api.Quizzes;
 using Vandingo.Api.Results;
@@ -11,11 +12,11 @@ var paths = DataPaths.FromConfiguration(builder.Configuration, builder.Environme
 builder.Services.AddSingleton(paths);
 builder.Services.AddSingleton<QuizLibrary>();
 builder.Services.AddSingleton<ResultStore>();
-builder.Services.AddSingleton<QuizImport>();
+builder.Services.AddSingleton<QuizBundleImport>();
 
 var app = builder.Build();
 
-InitialData.CopyIfEmpty(paths, app.Logger);
+app.Services.GetRequiredService<QuizBundleImport>().TakeOverInitialQuizzesIfEmpty();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -51,20 +52,20 @@ api.MapGet("/results", (string participant, int? limit, ResultStore results) =>
     results.List(participant, Math.Max(limit ?? 10, 0)));
 api.MapGet("/results/{id}", (string id, ResultStore results) =>
     results.Find(id) is { } result ? Results.Ok(result) : Results.NotFound());
-api.MapPost("/seed", (DataPaths paths) => SeedImport.CopyMissing(paths));
+api.MapPost("/seed", (QuizBundleImport import) => import.TakeOverFromSource());
 api.MapGet("/export", (DataPaths paths) => DataExport.Download(paths));
-api.MapPost("/import", async (HttpRequest request, bool? overwrite, QuizImport import) =>
+api.MapPost("/import", async (HttpRequest request, bool? overwrite, QuizBundleImport import) =>
 {
     // The ZIP needs a seekable stream, so the body is buffered first.
     using var body = new MemoryStream();
     await request.Body.CopyToAsync(body);
     body.Position = 0;
-    return import.Run(body, overwrite ?? false) switch
+    return import.Upload(body, overwrite ?? false) switch
     {
-        QuizImport.Invalid invalid => TypedResults.BadRequest(new { errors = invalid.Errors }),
-        QuizImport.Occupied occupied => TypedResults.Conflict(new { occupied = occupied.Quizzes }),
-        QuizImport.Imported done => Results.Ok(new { quizzes = done.Quizzes, subjects = done.Subjects }),
-        _ => Results.StatusCode(500),
+        QuizBundleImport.Invalid invalid => TypedResults.BadRequest(new { errors = invalid.Errors }),
+        QuizBundleImport.Occupied occupied => TypedResults.Conflict(new { occupied = occupied.Quizzes }),
+        QuizBundleImport.Imported done => Results.Ok(new { quizzes = done.Quizzes, subjects = done.Subjects }),
+        var other => throw new UnreachableException($"Unknown upload outcome {other}"),
     };
 });
 api.MapFallback(() => Results.NotFound());

@@ -108,6 +108,9 @@ public sealed class QuizLibrary(DataPaths paths, ILogger<QuizLibrary> logger)
     public Quiz? FindQuiz(string subject, int difficulty) =>
         SubjectExists(subject) ? ReadQuiz(QuizFile(subject, difficulty), difficulty) : null;
 
+    /// <summary>Whether this Difficulty is taken, even by a broken file that cannot be read.</summary>
+    public bool QuizExists(string subject, int difficulty) => SubjectExists(subject) && File.Exists(QuizFile(subject, difficulty));
+
     /// <summary>Everything wrong with a Quiz to be saved at this Difficulty; empty if it can be saved.</summary>
     public static IReadOnlyList<ValidationError> CheckQuiz(int difficulty, QuizDraft draft) => QuizRules.Check(difficulty, draft);
 
