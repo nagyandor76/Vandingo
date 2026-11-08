@@ -9,8 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var paths = DataPaths.FromConfiguration(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(paths);
-builder.Services.AddSingleton<SubjectStore>();
-builder.Services.AddSingleton<QuizStore>();
+builder.Services.AddSingleton<QuizLibrary>();
 builder.Services.AddSingleton<ResultStore>();
 builder.Services.AddSingleton<QuizImport>();
 
@@ -22,44 +21,27 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var api = app.MapGroup("/api");
-api.MapGet("/subjects", (SubjectStore subjects) => subjects.List());
-api.MapPost("/subjects", (NewSubject subject, SubjectStore subjects) =>
-{
-    if (SubjectStore.Check(subject) is [_, ..] errors) return ValidationError.Response(errors);
-    return subjects.Create(subject) is { } created
-        ? Results.Created($"/api/subjects/{created.Key}", created)
-        : Results.Conflict();
-});
-api.MapPut("/subjects/{key}", (string key, SubjectSettings settings, SubjectStore subjects) =>
-{
-    if (settings.MaxQuestions < 1)
-        return ValidationError.Response([new(null, "max_questions", "Legalább 1 kérdés kell.")]);
-    return subjects.Update(key, settings) is { } updated ? Results.Ok(updated) : Results.NotFound();
-});
-api.MapGet("/subjects/{key}/quizzes", (string key, QuizStore quizzes) =>
-    quizzes.List(key) is { } list ? Results.Ok(list) : Results.NotFound());
-api.MapGet("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizStore quizzes) =>
-    quizzes.Find(key, difficulty) is { } quiz ? Results.Ok(quiz) : Results.NotFound());
+api.MapGet("/subjects", (QuizLibrary library) => library.Subjects());
+api.MapPost("/subjects", (NewSubject subject, QuizLibrary library) =>
+    Respond(library.CreateSubject(subject), created => Results.Created($"/api/subjects/{created.Key}", created)));
+api.MapPut("/subjects/{key}", (string key, SubjectSettings settings, QuizLibrary library) =>
+    Respond(library.UpdateSubject(key, settings), Results.Ok));
+api.MapGet("/subjects/{key}/quizzes", (string key, QuizLibrary library) =>
+    library.Quizzes(key) is { } list ? Results.Ok(list) : Results.NotFound());
+api.MapGet("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizLibrary library) =>
+    library.FindQuiz(key, difficulty) is { } quiz ? Results.Ok(quiz) : Results.NotFound());
 api.MapPut("/subjects/{key}/quizzes/{difficulty:int}", (
     string key,
     int difficulty,
     [FromQuery(Name = "original_difficulty")] int? originalDifficulty,
     bool? overwrite,
     QuizDraft draft,
-    QuizStore quizzes) =>
-{
-    if (QuizRules.Check(difficulty, draft) is [_, ..] errors) return ValidationError.Response(errors);
-    return quizzes.Save(key, difficulty, draft, originalDifficulty, overwrite ?? false) switch
-    {
-        QuizStore.SaveOutcome.Saved => Results.Ok(),
-        QuizStore.SaveOutcome.Occupied => Results.Conflict(),
-        _ => Results.NotFound(),
-    };
-});
-api.MapDelete("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizStore quizzes) =>
-    quizzes.Delete(key, difficulty) ? Results.NoContent() : Results.NotFound());
-api.MapGet("/subjects/{key}/questions", (string key, int from, int to, QuizStore quizzes) =>
-    quizzes.Questions(key, from, to) is { } questions ? Results.Ok(questions) : Results.NotFound());
+    QuizLibrary library) =>
+    Respond(library.SaveQuiz(key, difficulty, draft, originalDifficulty, overwrite ?? false), _ => Results.Ok()));
+api.MapDelete("/subjects/{key}/quizzes/{difficulty:int}", (string key, int difficulty, QuizLibrary library) =>
+    library.DeleteQuiz(key, difficulty) ? Results.NoContent() : Results.NotFound());
+api.MapGet("/subjects/{key}/questions", (string key, int from, int to, QuizLibrary library) =>
+    library.Questions(key, from, to) is { } questions ? Results.Ok(questions) : Results.NotFound());
 api.MapPost("/results", (NewResult result, ResultStore results) =>
 {
     var saved = results.Save(result);
@@ -90,5 +72,14 @@ api.MapFallback(() => Results.NotFound());
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+/// <summary>The HTTP response for what became of a change to the Quiz library.</summary>
+static IResult Respond<T>(Outcome<T> outcome, Func<T, IResult> saved) => outcome.Kind switch
+{
+    OutcomeKind.Saved => saved(outcome.Value!),
+    OutcomeKind.Invalid => ValidationError.Response(outcome.Errors),
+    OutcomeKind.Occupied => Results.Conflict(),
+    _ => Results.NotFound(),
+};
 
 public partial class Program;

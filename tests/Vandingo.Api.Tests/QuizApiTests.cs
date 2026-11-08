@@ -363,6 +363,30 @@ public class QuizApiTests
         },
     };
 
+    [Theory]
+    [InlineData("ez nem JSON")]
+    [InlineData("""{ "name": "Kérdések nélkül", "default_time": 10 }""")]
+    public async Task A_broken_Quiz_file_is_left_out_of_the_list_and_the_Questions_instead_of_failing_the_whole_Subject(string broken)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """
+            { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [
+              { "type": "true-false", "text": "A piramis Egyiptomban áll.", "answer": ["true"] }
+            ] }
+            """);
+        app.WriteData("Quizzes/history/4.json", broken);
+        var client = app.CreateClient();
+
+        var quizzes = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        var questions = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/questions?from=1&to=20");
+        var single = await client.GetAsync("/api/subjects/history/quizzes/4");
+
+        Assert.Equal([3], quizzes.EnumerateArray().Select(quiz => quiz.GetProperty("difficulty").GetInt32()));
+        Assert.Equal(1, questions.GetArrayLength());
+        Assert.Equal(HttpStatusCode.NotFound, single.StatusCode);
+    }
+
     [Fact]
     public async Task Quiz_list_of_unknown_subject_is_not_found()
     {

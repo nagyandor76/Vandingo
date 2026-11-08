@@ -1,0 +1,3 @@
+npm start
+
+dotnet run scripts/tickets.cs

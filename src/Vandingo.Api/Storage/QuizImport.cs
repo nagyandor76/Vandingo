@@ -12,7 +12,7 @@ namespace Vandingo.Api.Storage;
 /// <c>&lt;subject&gt;/&lt;difficulty&gt;.json</c> and <c>&lt;subject&gt;/subject.json</c>, in the root or in a <c>Quizzes/</c> folder.
 /// Everything is checked first; nothing is written unless all of it is fine and no occupied Difficulty is unconfirmed.
 /// </summary>
-public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
+public sealed class QuizImport(QuizLibrary library)
 {
     private const string QuizzesFolder = "Quizzes";
     private const string SubjectFile = "subject.json";
@@ -74,7 +74,7 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
                 }
                 if (!TryReadDraft(item, errors, out var draft)) continue;
 
-                var problems = QuizRules.Check(difficulty, draft);
+                var problems = QuizLibrary.CheckQuiz(difficulty, draft);
                 errors.AddRange(problems.Select(error => FileError.Of(item.Path, error)));
                 if (problems.Count == 0) candidates.Add(new(item.Subject, difficulty, draft));
             }
@@ -83,13 +83,13 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
             if (errors.Count > 0) return new Invalid(errors);
 
             var taken = candidates
-                .Select(c => quizzes.Find(c.Subject, c.Difficulty) is { } existing ? new QuizRef(c.Subject, c.Difficulty, existing.Name) : null)
+                .Select(c => library.FindQuiz(c.Subject, c.Difficulty) is { } existing ? new QuizRef(c.Subject, c.Difficulty, existing.Name) : null)
                 .OfType<QuizRef>()
                 .ToList();
             if (taken.Count > 0 && !overwrite) return new Occupied(taken);
 
-            foreach (var subject in newSubjects) subjects.Import(subject);
-            foreach (var c in candidates) quizzes.Save(c.Subject, c.Difficulty, c.Draft, originalDifficulty: null, overwrite: true);
+            foreach (var subject in newSubjects) library.AddSubject(subject);
+            foreach (var c in candidates) library.SaveQuiz(c.Subject, c.Difficulty, c.Draft, overwrite: true);
             return new Imported(
                 candidates.Select(c => new QuizRef(c.Subject, c.Difficulty, c.Draft.Name!.Trim())).ToList(),
                 newSubjects.Select(s => new ImportedSubject(s.Key, s.Name)).ToList());
@@ -116,7 +116,7 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
                 errors.Add(new(path, null, "file", "A subject.json a ZIP-ben többször szerepel ebben a mappában."));
                 continue;
             }
-            if (SubjectStore.Check(new NewSubject(parts[0], "-")).Count > 0)
+            if (!QuizLayout.IsSubjectKey(parts[0]))
                 errors.Add(new(path, null, "subject", "A mappa neve csak kisbetű (a–z), számjegy (0–9) és - jel lehet."));
             else
                 found.Add(new(path, parts[0], parts[1], entry));
@@ -160,7 +160,7 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
     private List<Subject> NewSubjects(List<Item> items, List<FileError> errors)
     {
         var created = new List<Subject>();
-        foreach (var key in items.Select(i => i.Subject).Distinct().Where(key => !subjects.Exists(key)))
+        foreach (var key in items.Select(i => i.Subject).Distinct().Where(key => !library.SubjectExists(key)))
         {
             var path = $"{key}/{SubjectFile}";
             var item = items.FirstOrDefault(i => i.Path == path);
@@ -192,11 +192,9 @@ public sealed class QuizImport(SubjectStore subjects, QuizStore quizzes)
                 continue;
             }
 
-            var problems = SubjectStore.Check(new NewSubject(subject.Key, subject.Name)).ToList();
+            var problems = QuizLibrary.CheckSubject(subject).ToList();
             if (subject.Key is not null && subject.Key != key)
                 problems.Add(new(null, "key", "A kulcs nem egyezik a mappa nevével."));
-            if (subject.MaxQuestions < 1)
-                problems.Add(new(null, "max_questions", "Legalább 1 kérdés kell."));
             if (problems.Count > 0) errors.AddRange(problems.Select(p => FileError.Of(path, p)));
             else created.Add(subject with { Name = subject.Name.Trim() });
         }
