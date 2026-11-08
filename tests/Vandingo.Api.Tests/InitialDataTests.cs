@@ -11,8 +11,20 @@ public class InitialDataTests
         """;
 
     private const string HistoryQuiz = """
-        { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [] }
+        { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [
+          { "type": "true-false", "text": "Egy", "answer": ["true"] },
+          { "type": "true-false", "text": "Kettő", "answer": ["false"] },
+          { "type": "true-false", "text": "Három", "answer": ["true"] },
+          { "type": "true-false", "text": "Négy", "answer": ["true"] },
+          { "type": "true-false", "text": "Öt", "answer": ["true"] }
+        ] }
         """;
+
+    private static async Task<string[]> QuizListOf(VandingoApp app) =>
+        (await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes"))
+            .EnumerateArray()
+            .Select(quiz => $"{quiz.GetProperty("difficulty").GetInt32()} {quiz.GetProperty("name").GetString()}")
+            .ToArray();
 
     [Fact]
     public async Task Empty_data_directory_receives_the_initial_quizzes_and_subjects_on_startup()
@@ -26,7 +38,7 @@ public class InitialDataTests
         var subject = Assert.Single(subjects.EnumerateArray());
         Assert.Equal("history", subject.GetProperty("key").GetString());
         Assert.Equal("Történelem", subject.GetProperty("name").GetString());
-        Assert.Equal(HistoryQuiz, app.ReadData("Quizzes/history/3.json"));
+        Assert.Equal(["3 Egyiptom"], await QuizListOf(app));
     }
 
     [Fact]
@@ -37,9 +49,7 @@ public class InitialDataTests
         app.WriteSeed("history/subject.json", HistorySubject);
         app.WriteSeed("history/3.json", HistoryQuiz);
 
-        await app.CreateClient().GetAsync("/api/subjects");
-
-        Assert.Equal(HistoryQuiz, app.ReadData("Quizzes/history/3.json"));
+        Assert.Equal(["3 Egyiptom"], await QuizListOf(app));
     }
 
     [Fact]

@@ -102,6 +102,43 @@ public class SubjectApiTests
     }
 
     [Fact]
+    public async Task Folders_with_an_invalid_key_or_a_broken_subject_json_are_not_listed_and_the_rest_still_are()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/Math/subject.json", """
+            { "key": "Math", "name": "Matek", "max_questions": 20, "auto_advance": false }
+            """);
+        app.WriteData("Quizzes/english/subject.json", "ez nem JSON");
+
+        var subjects = await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/subjects");
+
+        Assert.Equal(["history"], subjects.EnumerateArray().Select(subject => subject.GetProperty("key").GetString()));
+    }
+
+    [Fact]
+    public async Task A_Subject_with_a_broken_subject_json_is_not_found_anywhere_and_nothing_is_written_into_it()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", "ez nem JSON");
+        var client = app.CreateClient();
+
+        var settings = await client.PutAsJsonAsync("/api/subjects/history", new { max_questions = 10, auto_advance = false });
+        var quizzes = await client.GetAsync("/api/subjects/history/quizzes");
+        var save = await client.PutAsJsonAsync("/api/subjects/history/quizzes/3", new
+        {
+            name = "Egyiptom",
+            default_time = 10,
+            questions = Enumerable.Range(1, 5).Select(n => new { type = "true-false", text = $"Állítás {n}", answer = new[] { "true" } }),
+        });
+
+        Assert.Equal(
+            [HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.NotFound],
+            new[] { settings.StatusCode, quizzes.StatusCode, save.StatusCode });
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "3.json")));
+    }
+
+    [Fact]
     public async Task A_taken_key_is_a_conflict_and_leaves_the_existing_Subject_alone()
     {
         using var app = new VandingoApp();

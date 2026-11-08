@@ -15,8 +15,11 @@ public class SeedApiTests
         { "key": "english", "name": "Angol", "max_questions": 15, "auto_advance": true }
         """;
 
-    private static string Quiz(string subject, int difficulty, string name) => $$"""
-        { "name": "{{name}}", "subject": "{{subject}}", "difficulty": {{difficulty}}, "default_time": 14, "questions": [] }
+    /// <summary>A valid Quiz of <paramref name="questions"/> true–false Questions (5 is the least a Quiz may have).</summary>
+    private static string Quiz(string subject, int difficulty, string name, int questions = 5) => $$"""
+        { "name": "{{name}}", "subject": "{{subject}}", "difficulty": {{difficulty}}, "default_time": 14, "questions": [
+          {{string.Join(",\n", Enumerable.Range(1, questions).Select(n => $$"""{ "type": "true-false", "text": "Állítás {{n}}", "answer": ["true"] }"""))}}
+        ] }
         """;
 
     private static async Task<JsonElement> Seed(VandingoApp app)
@@ -61,9 +64,12 @@ public class SeedApiTests
             && c.GetProperty("name").GetString() == "Angol");
         Assert.Contains(copied, c => c.GetProperty("difficulty").ValueKind == JsonValueKind.Number
             && c.GetProperty("name").GetString() == "Állatok");
-        Assert.Equal(English, app.ReadData("Quizzes/english/subject.json"));
         var subjects = await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/subjects");
-        Assert.Equal(2, subjects.GetArrayLength());
+        Assert.Equal(
+            ["english Angol 15 True", "history Történelem 20 False"],
+            subjects.EnumerateArray().Select(s => string.Join(' ',
+                s.GetProperty("key").GetString(), s.GetProperty("name").GetString(),
+                s.GetProperty("max_questions").GetInt32(), s.GetProperty("auto_advance").GetBoolean())));
     }
 
     [Fact]
@@ -96,10 +102,48 @@ public class SeedApiTests
         app.WriteSeed("history/3.json", Quiz("history", 3, "Egyiptom"));
         await app.CreateClient().GetAsync("/api/subjects");
 
+        var before = app.ReadData("Quizzes/history/3.json");
+
         var copied = await Seed(app);
 
         Assert.Equal(0, copied.GetArrayLength());
-        Assert.Equal(Quiz("history", 3, "Egyiptom"), app.ReadData("Quizzes/history/3.json"));
+        Assert.Equal(before, app.ReadData("Quizzes/history/3.json"));
+    }
+
+    [Fact]
+    public async Task A_source_Quiz_breaking_the_Quiz_rules_is_left_out_like_a_faulty_file()
+    {
+        using var app = new VandingoApp();
+        app.WriteSeed("history/subject.json", History);
+        await app.CreateClient().GetAsync("/api/subjects"); // startup copy
+        app.WriteSeed("history/4.json", Quiz("history", 4, "Csak négy kérdés", questions: 4));
+        app.WriteSeed("history/5.json", """{ "name": "Kérdések nélkül", "default_time": 10 }""");
+        app.WriteSeed("history/6.json", Quiz("history", 6, "Spárta"));
+        app.WriteSeed("history/99.json", Quiz("history", 99, "Túl magas szint"));
+
+        var copied = await Seed(app);
+
+        Assert.Equal([6], copied.EnumerateArray().Select(c => c.GetProperty("difficulty").GetInt32()));
+        var quizzes = await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        Assert.Equal([6], quizzes.EnumerateArray().Select(quiz => quiz.GetProperty("difficulty").GetInt32()));
+    }
+
+    [Theory]
+    [InlineData("ez nem JSON")]
+    [InlineData("""{ "key": "english", "name": "", "max_questions": 15, "auto_advance": true }""")]
+    [InlineData(null)]
+    public async Task Quizzes_of_a_new_Subject_whose_subject_json_is_faulty_or_missing_are_not_taken_over_either(string? subjectJson)
+    {
+        using var app = new VandingoApp();
+        app.WriteSeed("history/subject.json", History);
+        await app.CreateClient().GetAsync("/api/subjects"); // startup copy
+        if (subjectJson is not null) app.WriteSeed("english/subject.json", subjectJson);
+        app.WriteSeed("english/1.json", Quiz("english", 1, "Állatok"));
+
+        var copied = await Seed(app);
+
+        Assert.Equal(0, copied.GetArrayLength());
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "english", "1.json")));
     }
 
     [Fact]

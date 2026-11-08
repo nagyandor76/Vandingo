@@ -363,6 +363,70 @@ public class QuizApiTests
         },
     };
 
+    [Theory]
+    [InlineData("ez nem JSON")]
+    [InlineData("""{ "name": "Kérdések nélkül", "default_time": 10 }""")]
+    public async Task A_broken_Quiz_file_is_left_out_of_the_list_and_the_Questions_instead_of_failing_the_whole_Subject(string broken)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """
+            { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [
+              { "type": "true-false", "text": "A piramis Egyiptomban áll.", "answer": ["true"] }
+            ] }
+            """);
+        app.WriteData("Quizzes/history/4.json", broken);
+        var client = app.CreateClient();
+
+        var quizzes = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
+        var questions = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/questions?from=1&to=20");
+        var single = await client.GetAsync("/api/subjects/history/quizzes/4");
+
+        Assert.Equal([3], quizzes.EnumerateArray().Select(quiz => quiz.GetProperty("difficulty").GetInt32()));
+        Assert.Equal(1, questions.GetArrayLength());
+        Assert.Equal(HttpStatusCode.NotFound, single.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_conflict_names_the_Quiz_occupying_the_Difficulty_like_a_ZIP_upload_does()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """
+            { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [
+              { "type": "true-false", "text": "A piramis Egyiptomban áll.", "answer": ["true"] }
+            ] }
+            """);
+
+        var response = await app.CreateClient().PutAsJsonAsync("/api/subjects/history/quizzes/3", ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var occupied = Assert.Single((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("occupied").EnumerateArray());
+        Assert.Equal("history 3 Egyiptom", string.Join(' ',
+            occupied.GetProperty("subject").GetString(), occupied.GetProperty("difficulty").GetInt32(), occupied.GetProperty("name").GetString()));
+    }
+
+    [Fact]
+    public async Task Saving_the_same_Quiz_many_times_at_once_never_fails_and_leaves_one_whole_file()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+
+        var responses = await Task.WhenAll(Enumerable.Range(1, 30).Select(n =>
+        {
+            var quiz = ValidQuiz();
+            quiz["name"] = $"Mentés {n}";
+            return client.PutAsJsonAsync("/api/subjects/history/quizzes/3?overwrite=true", quiz);
+        }));
+
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        var saved = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes/3");
+        Assert.StartsWith("Mentés ", saved.GetProperty("name").GetString());
+        Assert.Equal(["3.json", "subject.json"],
+            Directory.GetFiles(Path.Combine(app.DataDirectory, "Quizzes", "history")).Select(Path.GetFileName).Order());
+    }
+
     [Fact]
     public async Task Quiz_list_of_unknown_subject_is_not_found()
     {
