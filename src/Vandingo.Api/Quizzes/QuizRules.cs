@@ -3,7 +3,7 @@ using Vandingo.Api.Validation;
 namespace Vandingo.Api.Quizzes;
 
 /// <summary>What a Quiz must satisfy before it is saved: the Quiz as a whole, and each Question by its type's rules.</summary>
-public static class QuizRules
+internal static class QuizRules
 {
     public const int MinQuestions = 5;
     public const int MinDifficulty = 1;

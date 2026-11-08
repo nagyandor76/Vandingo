@@ -83,20 +83,22 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
             }
             if (errors.Count > 0) return new Invalid(errors);
 
-            var taken = quizzes
+            var occupied = quizzes
                 .Where(quiz => library.QuizExists(quiz.File.Subject, quiz.File.Difficulty!.Value))
                 .Select(quiz => new QuizRef(
                     quiz.File.Subject,
                     quiz.File.Difficulty!.Value,
                     library.FindQuiz(quiz.File.Subject, quiz.File.Difficulty.Value)?.Name ?? ""))
                 .ToList();
-            if (taken.Count > 0 && !overwrite) return new Occupied(taken);
+            if (occupied.Count > 0 && !overwrite) return new Occupied(occupied);
 
-            var subjects = newSubjects.Select(library.AddSubject).Where(IsSaved).Select(added => added.Value!).ToList();
+            // Everything was checked above, so a write can only fail if the library changed meanwhile:
+            // that is an error, not something to leave out quietly.
+            var subjects = newSubjects.Select(subject => SavedOrThrow(library.AddSubject(subject), subject.Key)).ToList();
             var saved = quizzes
-                .Select(quiz => library.SaveQuiz(quiz.File.Subject, quiz.File.Difficulty!.Value, quiz.Draft, overwrite: true))
-                .Where(IsSaved)
-                .Select(outcome => outcome.Value!)
+                .Select(quiz => SavedOrThrow(
+                    library.SaveQuiz(quiz.File.Subject, quiz.File.Difficulty!.Value, quiz.Draft, overwrite: true),
+                    quiz.File.Path))
                 .ToList();
             return new Imported(
                 saved.Select(quiz => new QuizRef(quiz.Subject, quiz.Difficulty, quiz.Name)).ToList(),
@@ -208,5 +210,8 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
         logger.LogWarning("Initial-quiz file {File} is left out: {Errors}", path,
             errors.Count == 0 ? "it could not be saved" : string.Join("; ", errors.Select(error => $"{error.Field}: {error.Message}")));
 
-    private static bool IsSaved<T>(Outcome<T> outcome) => outcome.Kind == OutcomeKind.Saved;
+    private static T SavedOrThrow<T>(Outcome<T> outcome, string what) =>
+        outcome.Kind == OutcomeKind.Saved
+            ? outcome.Value!
+            : throw new InvalidOperationException($"Upload of {what} was checked but could not be saved: {outcome.Kind}");
 }

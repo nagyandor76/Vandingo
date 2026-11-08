@@ -117,6 +117,28 @@ public class SubjectApiTests
     }
 
     [Fact]
+    public async Task A_Subject_with_a_broken_subject_json_is_not_found_anywhere_and_nothing_is_written_into_it()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", "ez nem JSON");
+        var client = app.CreateClient();
+
+        var settings = await client.PutAsJsonAsync("/api/subjects/history", new { max_questions = 10, auto_advance = false });
+        var quizzes = await client.GetAsync("/api/subjects/history/quizzes");
+        var save = await client.PutAsJsonAsync("/api/subjects/history/quizzes/3", new
+        {
+            name = "Egyiptom",
+            default_time = 10,
+            questions = Enumerable.Range(1, 5).Select(n => new { type = "true-false", text = $"Állítás {n}", answer = new[] { "true" } }),
+        });
+
+        Assert.Equal(
+            [HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.NotFound],
+            new[] { settings.StatusCode, quizzes.StatusCode, save.StatusCode });
+        Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "3.json")));
+    }
+
+    [Fact]
     public async Task A_taken_key_is_a_conflict_and_leaves_the_existing_Subject_alone()
     {
         using var app = new VandingoApp();

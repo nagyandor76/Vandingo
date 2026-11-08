@@ -40,7 +40,11 @@ public sealed class QuizLibrary(DataPaths paths, ILogger<QuizLibrary> logger)
         return TryRead<Subject>(SubjectFile(key)) is { Name: not null } subject ? subject with { Key = key } : null;
     }
 
-    public bool SubjectExists(string key) => QuizLayout.IsSubjectKey(key) && File.Exists(SubjectFile(key));
+    /// <summary>
+    /// Whether there is a Subject with this key that can be read; a Subject whose file is broken does not exist anywhere,
+    /// so its Quizzes are not served or written either, and adding the Subject again replaces the broken file.
+    /// </summary>
+    public bool SubjectExists(string key) => FindSubject(key) is not null;
 
     /// <summary>Everything wrong with a Subject to be added; empty if nothing.</summary>
     public static IReadOnlyList<ValidationError> CheckSubject(Subject subject)
