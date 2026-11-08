@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Vandingo.Api.Storage;
 
 namespace Vandingo.Api.Quizzes;
 
@@ -6,7 +6,7 @@ namespace Vandingo.Api.Quizzes;
 /// How Subjects and Quizzes are laid out as files, in the data directory, the initial-quiz source and an uploaded ZIP alike:
 /// a folder per Subject named by its key, holding its <c>subject.json</c> and a <c>&lt;difficulty&gt;.json</c> per Quiz.
 /// </summary>
-public static partial class QuizLayout
+public static class QuizLayout
 {
     public const string SubjectFileName = "subject.json";
 
@@ -24,9 +24,6 @@ public static partial class QuizLayout
         return number.Length > 0 && number.All(char.IsAsciiDigit) && int.TryParse(number, out difficulty);
     }
 
-    /// <summary>A Subject key: lowercase letters, digits and hyphens, so it is always a safe folder name.</summary>
-    public static bool IsSubjectKey(string? key) => key is not null && KeyPattern().IsMatch(key);
-
-    [GeneratedRegex("^[a-z0-9-]+$")]
-    private static partial Regex KeyPattern();
+    /// <summary>A Subject key: lowercase letters, digits and hyphens, which is also what makes it a safe folder name.</summary>
+    public static bool IsSubjectKey(string? key) => DataPaths.IsPlainName(key);
 }

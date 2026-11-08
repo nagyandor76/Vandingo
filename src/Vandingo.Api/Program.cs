@@ -43,7 +43,7 @@ api.MapDelete("/subjects/{key}/quizzes/{difficulty:int}", (string key, int diffi
     library.DeleteQuiz(key, difficulty) ? Results.NoContent() : Results.NotFound());
 api.MapGet("/subjects/{key}/questions", (string key, int from, int to, QuizLibrary library) =>
     library.Questions(key, from, to) is { } questions ? Results.Ok(questions) : Results.NotFound());
-api.MapPost("/results", (NewResult result, ResultStore results) =>
+api.MapPost("/results", (Result result, ResultStore results) =>
 {
     var saved = results.Save(result);
     return Results.Created($"/api/results/{saved.Id}", saved);

@@ -144,6 +144,49 @@ public class ResultApiTests
         """;
 
     [Fact]
+    public async Task The_server_gives_a_Result_its_id_and_completion_time_whatever_the_client_sends()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("results/taken.json", StoredResult("taken", "2026-10-20T08:00:00+00:00", "Vanda", "history"));
+        var client = app.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/results", new
+        {
+            id = "taken",
+            completedAt = "2000-01-01T00:00:00+00:00",
+            participant = "Janka",
+            subject = "history",
+            difficultyFrom = 1,
+            difficultyTo = 5,
+            total = 20,
+            correct = 17,
+            incorrect = 3,
+            scorePercent = 85,
+            timeLimitSeconds = 200,
+            elapsedSeconds = 156,
+        });
+
+        var saved = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.NotEqual("taken", saved.GetProperty("id").GetString());
+        Assert.True(saved.GetProperty("completedAt").GetDateTimeOffset() > DateTimeOffset.UtcNow.AddMinutes(-1));
+        Assert.Contains("\"Vanda\"", app.ReadData("results/taken.json"));
+    }
+
+    [Theory]
+    [InlineData("..%2Fsecret")]
+    [InlineData("a.b")]
+    public async Task A_Result_id_that_is_not_a_plain_name_is_not_found(string id)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("a.b.json", StoredResult("a.b", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+        app.WriteData("secret.json", StoredResult("secret", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+
+        var response = await app.CreateClient().GetAsync($"/api/results/{id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Unknown_Result_is_not_found()
     {
         using var app = new VandingoApp();

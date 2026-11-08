@@ -5,24 +5,10 @@ namespace Vandingo.Api.Results;
 /// <summary>Keeps every Result in its own file, <c>results/&lt;id&gt;.json</c> in the data directory.</summary>
 public sealed class ResultStore(DataPaths paths)
 {
-    public Result Save(NewResult result)
+    /// <summary>Saves a submitted Result under a new id, completed now; whatever id and time the client sent are ignored.</summary>
+    public Result Save(Result submitted)
     {
-        var saved = new Result(
-            Guid.NewGuid().ToString("N"),
-            DateTimeOffset.UtcNow,
-            result.Participant,
-            result.Subject,
-            result.DifficultyFrom,
-            result.DifficultyTo,
-            result.QuizNameFrom,
-            result.QuizNameTo,
-            result.Total,
-            result.Correct,
-            result.Incorrect,
-            result.ScorePercent,
-            result.TimeLimitSeconds,
-            result.ElapsedSeconds);
-
+        var saved = submitted with { Id = Guid.NewGuid().ToString("N"), CompletedAt = DateTimeOffset.UtcNow };
         JsonFile.Write(FileOf(saved.Id), saved);
         return saved;
     }
@@ -43,7 +29,7 @@ public sealed class ResultStore(DataPaths paths)
     /// <summary>The Result with this id, or null if there is none.</summary>
     public Result? Find(string id)
     {
-        if (id.IndexOfAny(['/', '\\', '.']) >= 0) return null;
+        if (!DataPaths.IsPlainName(id)) return null;
         var file = FileOf(id);
         return File.Exists(file) ? JsonFile.Read<Result>(file) : null;
     }
