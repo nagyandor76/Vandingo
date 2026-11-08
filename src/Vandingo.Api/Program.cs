@@ -1,10 +1,8 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Vandingo.Api.Quizzes;
 using Vandingo.Api.Results;
 using Vandingo.Api.Storage;
 using Vandingo.Api.Subjects;
-using Vandingo.Api.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,13 +58,7 @@ api.MapPost("/import", async (HttpRequest request, bool? overwrite, QuizBundleIm
     using var body = new MemoryStream();
     await request.Body.CopyToAsync(body);
     body.Position = 0;
-    return import.Upload(body, overwrite ?? false) switch
-    {
-        QuizBundleImport.Invalid invalid => TypedResults.BadRequest(new { errors = invalid.Errors }),
-        QuizBundleImport.Occupied occupied => TypedResults.Conflict(new { occupied = occupied.Quizzes }),
-        QuizBundleImport.Imported done => Results.Ok(new { quizzes = done.Quizzes, subjects = done.Subjects }),
-        var other => throw new UnreachableException($"Unknown upload outcome {other}"),
-    };
+    return Respond(import.Upload(body, overwrite ?? false), Results.Ok);
 });
 api.MapFallback(() => Results.NotFound());
 
@@ -74,11 +66,15 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-/// <summary>The HTTP response for what became of a change to the Quiz library.</summary>
+/// <summary>
+/// The HTTP response for what became of a change to the Quiz library: 400 with the errors,
+/// 409 with the occupying Quizzes (if it is about Quizzes), 404, or whatever a saved change answers.
+/// </summary>
 static IResult Respond<T>(Outcome<T> outcome, Func<T, IResult> saved) => outcome.Kind switch
 {
     OutcomeKind.Saved => saved(outcome.Value!),
-    OutcomeKind.Invalid => ValidationError.Response(outcome.Errors),
+    OutcomeKind.Invalid => TypedResults.BadRequest(new { errors = outcome.Errors }),
+    OutcomeKind.Occupied when outcome.OccupiedBy is [_, ..] => TypedResults.Conflict(new { occupied = outcome.OccupiedBy }),
     OutcomeKind.Occupied => Results.Conflict(),
     _ => Results.NotFound(),
 };

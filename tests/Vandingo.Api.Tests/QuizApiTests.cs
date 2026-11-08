@@ -388,6 +388,25 @@ public class QuizApiTests
     }
 
     [Fact]
+    public async Task A_conflict_names_the_Quiz_occupying_the_Difficulty_like_a_ZIP_upload_does()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        app.WriteData("Quizzes/history/3.json", """
+            { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [
+              { "type": "true-false", "text": "A piramis Egyiptomban áll.", "answer": ["true"] }
+            ] }
+            """);
+
+        var response = await app.CreateClient().PutAsJsonAsync("/api/subjects/history/quizzes/3", ValidQuiz());
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var occupied = Assert.Single((await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("occupied").EnumerateArray());
+        Assert.Equal("history 3 Egyiptom", string.Join(' ',
+            occupied.GetProperty("subject").GetString(), occupied.GetProperty("difficulty").GetInt32(), occupied.GetProperty("name").GetString()));
+    }
+
+    [Fact]
     public async Task Saving_the_same_Quiz_many_times_at_once_never_fails_and_leaves_one_whole_file()
     {
         using var app = new VandingoApp();

@@ -39,23 +39,23 @@ public static class QuizBundle
             .ToList();
 
     /// <summary>The file's content as <typeparamref name="T"/>, or null and why it cannot be read.</summary>
-    public static T? Read<T>(BundleFile file, out FileError? error) where T : class
+    public static T? Read<T>(BundleFile file, out ValidationError? error) where T : class
     {
         error = null;
         try
         {
             using var stream = file.Open();
             if (JsonSerializer.Deserialize<T>(stream) is { } value) return value;
-            error = new(file.Path, null, "json", "A fájl üres.");
+            error = ValidationError.OfFile(file.Path, "json", "A fájl üres.");
         }
         catch (Exception exception) when (exception is InvalidDataException or IOException)
         {
-            error = new(file.Path, null, "file", $"A fájl sérült vagy nem olvasható: {exception.Message}");
+            error = ValidationError.OfFile(file.Path, "file", $"A fájl sérült vagy nem olvasható: {exception.Message}");
         }
         catch (JsonException exception)
         {
             var line = exception.LineNumber is { } n ? $" ({n + 1}. sor)" : "";
-            error = new(file.Path, null, "json", $"Hibás JSON{line}: {exception.Message}");
+            error = ValidationError.OfFile(file.Path, "json", $"Hibás JSON{line}: {exception.Message}");
         }
         return null;
     }

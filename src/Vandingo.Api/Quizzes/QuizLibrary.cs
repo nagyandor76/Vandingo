@@ -126,7 +126,8 @@ public sealed class QuizLibrary(DataPaths paths, ILogger<QuizLibrary> logger)
     {
         if (CheckQuiz(difficulty, draft) is [_, ..] errors) return Outcome<Quiz>.Invalid(errors);
         if (!SubjectExists(subject)) return Outcome<Quiz>.NotFound();
-        if (difficulty != originalDifficulty && File.Exists(QuizFile(subject, difficulty)) && !overwrite) return Outcome<Quiz>.Occupied();
+        if (difficulty != originalDifficulty && !overwrite && QuizExists(subject, difficulty))
+            return Outcome<Quiz>.Occupied([OccupantOf(subject, difficulty)]);
 
         var questions = draft.Questions!.Select(question => question with
         {
@@ -140,6 +141,10 @@ public sealed class QuizLibrary(DataPaths paths, ILogger<QuizLibrary> logger)
         if (originalDifficulty is { } original && original != difficulty) File.Delete(QuizFile(subject, original));
         return Outcome<Quiz>.Saved(quiz);
     }
+
+    /// <summary>The Quiz occupying this Difficulty; a broken file there has no name.</summary>
+    public QuizRef OccupantOf(string subject, int difficulty) =>
+        new(subject, difficulty, FindQuiz(subject, difficulty)?.Name ?? "");
 
     /// <summary>Removes the Quiz at this Difficulty; false if there is none.</summary>
     public bool DeleteQuiz(string subject, int difficulty)

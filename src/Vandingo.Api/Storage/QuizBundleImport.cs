@@ -20,21 +20,10 @@ public sealed record SeedItem(
 /// </summary>
 public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogger<QuizBundleImport> logger)
 {
-    public abstract record UploadOutcome;
-
-    /// <summary>Something in the ZIP is wrong; nothing was written.</summary>
-    public sealed record Invalid(IReadOnlyList<FileError> Errors) : UploadOutcome;
-
-    /// <summary>These Difficulties are taken and overwriting was not confirmed; nothing was written.</summary>
-    public sealed record Occupied(IReadOnlyList<QuizRef> Quizzes) : UploadOutcome;
-
-    public sealed record Imported(IReadOnlyList<QuizRef> Quizzes, IReadOnlyList<ImportedSubject> Subjects) : UploadOutcome;
-
-    /// <summary>A Quiz by its Subject, Difficulty and name: an occupied one (the existing name) or an imported one.</summary>
-    public sealed record QuizRef(
-        [property: JsonPropertyName("subject")] string Subject,
-        [property: JsonPropertyName("difficulty")] int Difficulty,
-        [property: JsonPropertyName("name")] string Name);
+    /// <summary>What an upload brought in: every Quiz, and the Subjects it created.</summary>
+    public sealed record Imported(
+        [property: JsonPropertyName("quizzes")] IReadOnlyList<QuizRef> Quizzes,
+        [property: JsonPropertyName("subjects")] IReadOnlyList<ImportedSubject> Subjects);
 
     public sealed record ImportedSubject(
         [property: JsonPropertyName("key")] string Key,
@@ -43,9 +32,10 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
     /// <summary>
     /// Loads every Quiz of the ZIP, creating the Subjects that do not exist yet from their <c>subject.json</c>;
     /// an existing Subject's own settings are never touched. Everything is checked first, and nothing is written
-    /// unless all of it is fine and every occupied Difficulty may be overwritten.
+    /// unless all of it is fine (else invalid, each error naming its file) and every occupied Difficulty may be overwritten
+    /// (else occupied, by those Quizzes).
     /// </summary>
-    public UploadOutcome Upload(Stream zipStream, bool overwrite)
+    public Outcome<Imported> Upload(Stream zipStream, bool overwrite)
     {
         ZipArchive zip;
         try
@@ -54,12 +44,12 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
         }
         catch (InvalidDataException)
         {
-            return new Invalid([new FileError("", null, "file", "A feltöltött fájl nem érvényes ZIP.")]);
+            return Outcome<Imported>.Invalid([ValidationError.OfFile("", "file", "A feltöltött fájl nem érvényes ZIP.")]);
         }
 
         using (zip)
         {
-            var errors = new List<FileError>();
+            var errors = new List<ValidationError>();
             var files = UsableFiles(QuizBundle.FromZip(zip), errors);
 
             var quizzes = new List<(BundleFile File, QuizDraft Draft)>();
@@ -71,7 +61,7 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
                     continue;
                 }
                 var problems = QuizLibrary.CheckQuiz(file.Difficulty!.Value, draft);
-                errors.AddRange(problems.Select(problem => FileError.Of(file.Path, problem)));
+                errors.AddRange(problems.Select(problem => problem with { File = file.Path }));
                 if (problems.Count == 0) quizzes.Add((file, draft));
             }
 
@@ -81,16 +71,13 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
                 if (ReadNewSubject(files, key, out var subjectErrors) is { } subject) newSubjects.Add(subject);
                 errors.AddRange(subjectErrors);
             }
-            if (errors.Count > 0) return new Invalid(errors);
+            if (errors.Count > 0) return Outcome<Imported>.Invalid(errors);
 
             var occupied = quizzes
                 .Where(quiz => library.QuizExists(quiz.File.Subject, quiz.File.Difficulty!.Value))
-                .Select(quiz => new QuizRef(
-                    quiz.File.Subject,
-                    quiz.File.Difficulty!.Value,
-                    library.FindQuiz(quiz.File.Subject, quiz.File.Difficulty.Value)?.Name ?? ""))
+                .Select(quiz => library.OccupantOf(quiz.File.Subject, quiz.File.Difficulty!.Value))
                 .ToList();
-            if (occupied.Count > 0 && !overwrite) return new Occupied(occupied);
+            if (occupied.Count > 0 && !overwrite) return Outcome<Imported>.Occupied(occupied);
 
             // Everything was checked above, so a write can only fail if the library changed meanwhile:
             // that is an error, not something to leave out quietly.
@@ -100,9 +87,9 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
                     library.SaveQuiz(quiz.File.Subject, quiz.File.Difficulty!.Value, quiz.Draft, overwrite: true),
                     quiz.File.Path))
                 .ToList();
-            return new Imported(
+            return Outcome<Imported>.Saved(new Imported(
                 saved.Select(quiz => new QuizRef(quiz.Subject, quiz.Difficulty, quiz.Name)).ToList(),
-                subjects.Select(subject => new ImportedSubject(subject.Key, subject.Name)).ToList());
+                subjects.Select(subject => new ImportedSubject(subject.Key, subject.Name)).ToList()));
         }
     }
 
@@ -145,7 +132,7 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
                 }
                 var outcome = library.SaveQuiz(key, difficulty, draft);
                 if (outcome.Kind == OutcomeKind.Saved) taken.Add(new SeedItem(key, difficulty, outcome.Value!.Name));
-                else LogLeftOut(outcome.Errors.Select(problem => FileError.Of(file.Path, problem)).ToList(), file.Path);
+                else LogLeftOut(outcome.Errors.Select(problem => problem with { File = file.Path }).ToList(), file.Path);
             }
         }
         return taken;
@@ -166,7 +153,7 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
     /// <summary>
     /// The files that can be taken further: each Subject and Difficulty at most once, in a folder named by a valid Subject key.
     /// </summary>
-    private static List<BundleFile> UsableFiles(IReadOnlyList<BundleFile> files, List<FileError> errors)
+    private static List<BundleFile> UsableFiles(IReadOnlyList<BundleFile> files, List<ValidationError> errors)
     {
         var usable = new List<BundleFile>();
         var seen = new HashSet<(string, int?)>();
@@ -174,10 +161,10 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
         {
             if (!seen.Add((file.Subject, file.Difficulty)))
                 errors.Add(file.IsSubjectFile
-                    ? new(file.Path, null, "file", "A subject.json a ZIP-ben többször szerepel ebben a mappában.")
-                    : new(file.Path, null, "difficulty", "Ez a szint a ZIP-ben már szerepel."));
+                    ? ValidationError.OfFile(file.Path, "file", "A subject.json a ZIP-ben többször szerepel ebben a mappában.")
+                    : ValidationError.OfFile(file.Path, "difficulty", "Ez a szint a ZIP-ben már szerepel."));
             else if (!QuizLayout.IsSubjectKey(file.Subject))
-                errors.Add(new(file.Path, null, "subject", "A mappa neve csak kisbetű (a–z), számjegy (0–9) és - jel lehet."));
+                errors.Add(ValidationError.OfFile(file.Path, "subject", "A mappa neve csak kisbetű (a–z), számjegy (0–9) és - jel lehet."));
             else
                 usable.Add(file);
         }
@@ -185,13 +172,13 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
     }
 
     /// <summary>A Subject that does not exist yet, from its folder's <c>subject.json</c>: null, with the reasons, if that cannot be done.</summary>
-    private static Subject? ReadNewSubject(IReadOnlyList<BundleFile> files, string key, out List<FileError> errors)
+    private static Subject? ReadNewSubject(IReadOnlyList<BundleFile> files, string key, out List<ValidationError> errors)
     {
         errors = [];
         var path = $"{key}/{QuizLayout.SubjectFileName}";
         if (files.FirstOrDefault(file => file.Subject == key && file.IsSubjectFile) is not { } subjectFile)
         {
-            errors.Add(new(path, null, "file", "Új tantárgyhoz kell a subject.json."));
+            errors.Add(ValidationError.OfFile(path, "file", "Új tantárgyhoz kell a subject.json."));
             return null;
         }
         if (QuizBundle.Read<Subject>(subjectFile, out var error) is not { } subject)
@@ -200,13 +187,13 @@ public sealed class QuizBundleImport(QuizLibrary library, DataPaths paths, ILogg
             return null;
         }
 
-        errors.AddRange(QuizLibrary.CheckSubject(subject).Select(problem => FileError.Of(path, problem)));
+        errors.AddRange(QuizLibrary.CheckSubject(subject).Select(problem => problem with { File = path }));
         if (subject.Key is not null && subject.Key != key)
-            errors.Add(new(path, null, "key", "A kulcs nem egyezik a mappa nevével."));
+            errors.Add(ValidationError.OfFile(path, "key", "A kulcs nem egyezik a mappa nevével."));
         return errors.Count == 0 ? subject : null;
     }
 
-    private void LogLeftOut(IReadOnlyList<FileError> errors, string path) =>
+    private void LogLeftOut(IReadOnlyList<ValidationError> errors, string path) =>
         logger.LogWarning("Initial-quiz file {File} is left out: {Errors}", path,
             errors.Count == 0 ? "it could not be saved" : string.Join("; ", errors.Select(error => $"{error.Field}: {error.Message}")));
 
