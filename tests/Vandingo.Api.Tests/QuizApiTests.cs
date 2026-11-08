@@ -388,6 +388,27 @@ public class QuizApiTests
     }
 
     [Fact]
+    public async Task Saving_the_same_Quiz_many_times_at_once_never_fails_and_leaves_one_whole_file()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+
+        var responses = await Task.WhenAll(Enumerable.Range(1, 30).Select(n =>
+        {
+            var quiz = ValidQuiz();
+            quiz["name"] = $"Mentés {n}";
+            return client.PutAsJsonAsync("/api/subjects/history/quizzes/3?overwrite=true", quiz);
+        }));
+
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        var saved = await client.GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes/3");
+        Assert.StartsWith("Mentés ", saved.GetProperty("name").GetString());
+        Assert.Equal(["3.json", "subject.json"],
+            Directory.GetFiles(Path.Combine(app.DataDirectory, "Quizzes", "history")).Select(Path.GetFileName).Order());
+    }
+
+    [Fact]
     public async Task Quiz_list_of_unknown_subject_is_not_found()
     {
         using var app = new VandingoApp();

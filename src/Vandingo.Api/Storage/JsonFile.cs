@@ -25,8 +25,36 @@ public static class JsonFile
     public static void WriteText(string file, string json)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-        var temporary = file + ".tmp";
-        File.WriteAllText(temporary, json);
-        File.Move(temporary, file, overwrite: true);
+        // Each write has a temporary file of its own, so writes of the same file at once do not collide: the last one wins.
+        var temporary = $"{file}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temporary, json);
+            MoveIntoPlace(temporary, file);
+        }
+        finally
+        {
+            File.Delete(temporary);
+        }
+    }
+
+    /// <summary>
+    /// Replaces the file with the temporary one. On Linux this never collides; on Windows replacing a file that
+    /// another write is replacing at that very moment is denied, so it is tried again a few times.
+    /// </summary>
+    private static void MoveIntoPlace(string temporary, string file)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temporary, file, overwrite: true);
+                return;
+            }
+            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException && attempt < 20)
+            {
+                Thread.Sleep(attempt * 5);
+            }
+        }
     }
 }
