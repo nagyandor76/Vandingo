@@ -38,6 +38,10 @@ public static class JsonFile
         }
     }
 
+    // About a second in all before a real error (say, no permission) is let through.
+    private const int MoveAttempts = 20;
+    private const int MoveBackoffMilliseconds = 5;
+
     /// <summary>
     /// Replaces the file with the temporary one. On Linux this never collides; on Windows replacing a file that
     /// another write is replacing at that very moment is denied, so it is tried again a few times.
@@ -51,9 +55,9 @@ public static class JsonFile
                 File.Move(temporary, file, overwrite: true);
                 return;
             }
-            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException && attempt < 20)
+            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException && attempt < MoveAttempts)
             {
-                Thread.Sleep(attempt * 5);
+                Thread.Sleep(attempt * MoveBackoffMilliseconds);
             }
         }
     }

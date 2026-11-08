@@ -178,7 +178,7 @@ public class ResultApiTests
     public async Task A_Result_id_that_is_not_a_plain_name_is_not_found(string id)
     {
         using var app = new VandingoApp();
-        app.WriteData("a.b.json", StoredResult("a.b", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+        app.WriteData("results/a.b.json", StoredResult("a.b", "2026-10-20T08:00:00+00:00", "Janka", "history"));
         app.WriteData("secret.json", StoredResult("secret", "2026-10-20T08:00:00+00:00", "Janka", "history"));
 
         var response = await app.CreateClient().GetAsync($"/api/results/{id}");
