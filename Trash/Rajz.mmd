@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph web["web/ (React)"]
+        Screens["screens/<br/>Home · Practice · Editor · Results · Settings"]
+        Engine["practice/engine.ts<br/>(Blokkok, visszaszámlálás)"]
+        Upload["editor/upload.ts<br/>(ZIP)"]
+    end
+    subgraph api["Program.cs  /api"]
+        R["Respond(Outcome) → 200/201 · 400 · 409 · 404"]
+    end
+    subgraph core["Vandingo.Api"]
+        QL["QuizLibrary<br/>Tantárgyak + Kvízek"]
+        QBI["QuizBundleImport<br/>ZIP / seed átvétel"]
+        RS["ResultStore"]
+    end
+    Disk[("data/<br/>Quizzes/{subject}/subject.json<br/>Quizzes/{subject}/{n}.json<br/>results/*.json")]
+
+    Screens --> R
+    Engine --> R
+    Upload --> R
+    R --> QL & QBI & RS
+    QBI --> QL
+    QL --> Disk
+    RS --> Disk
