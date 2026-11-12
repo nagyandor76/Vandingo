@@ -186,6 +186,23 @@ public class ResultApiTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("ez nem JSON")]
+    [InlineData("null")]
+    public async Task A_broken_Result_file_is_left_out_of_the_list_and_not_found_instead_of_failing_every_Result(string broken)
+    {
+        using var app = new VandingoApp();
+        app.WriteData("results/good.json", StoredResult("good", "2026-10-20T08:00:00+00:00", "Janka", "history"));
+        app.WriteData("results/broken.json", broken);
+        var client = app.CreateClient();
+
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/results?participant=Janka");
+        var single = await client.GetAsync("/api/results/broken");
+
+        Assert.Equal(["good"], list.EnumerateArray().Select(result => result.GetProperty("id").GetString()));
+        Assert.Equal(HttpStatusCode.NotFound, single.StatusCode);
+    }
+
     [Fact]
     public async Task Unknown_Result_is_not_found()
     {

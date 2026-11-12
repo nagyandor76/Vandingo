@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: []
 ---
 
@@ -11,7 +11,9 @@ Forrás: architektúra-áttekintés (2026-11-12), 5. jelölt, mellékes megálla
 
 - A sérült Result-fájlt a lista hagyja ki és naplózza. A `GET /api/results/{id}` sérült fájlnál 404-et adjon.
 
-- [ ] API-teszt: egy sérült fájl mellett a többi Result listázható
-- [ ] API-teszt: a sérült fájl id-jére 404 jön
+- [x] API-teszt: egy sérült fájl mellett a többi Result listázható
+- [x] API-teszt: a sérült fájl id-jére 404 jön
 
 ## Comments
+
+- 2026-11-12: Elkészült. A hibatűrő olvasás `JsonFile.TryRead` néven közös lett, ezt használja a `QuizLibrary` és a `ResultStore` is. A sérült fájlt naplózza és kihagyja, a JSON `null`-t is beleértve.

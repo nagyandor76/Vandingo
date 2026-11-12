@@ -10,7 +10,7 @@ import {
   type ICellRendererParams,
 } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
-import { deleteQuiz, fetchQuiz, fetchQuizzes, fetchSubjects, saveQuiz, type QuizSummary, type ValidationError } from '../api.ts'
+import { deleteQuiz, fetchQuiz, fetchQuizzes, fetchSubjects, saveQuiz, type QuizRef, type QuizSummary, type ValidationError } from '../api.ts'
 import { clipboardFields, copyCells, parseClipboard, pasteCells, type CellPosition, type ClipboardField } from '../editor/clipboard.ts'
 import {
   emptyRow,
@@ -85,6 +85,8 @@ export default function QuizEditor() {
   const [targetDifficulty, setTargetDifficulty] = useState(difficulty)
   const [otherQuizzes, setOtherQuizzes] = useState<QuizSummary[]>([])
   const [confirm, setConfirm] = useState<'overwrite' | 'delete'>()
+  // The Quiz at the target Difficulty, as the server named it when the save was refused.
+  const [occupant, setOccupant] = useState<QuizRef>()
   const [deleteFailed, setDeleteFailed] = useState(false)
   const grid = useRef<AgGridReact<EditorRow>>(null)
   // Read by the cell styles, which the grid keeps from its first render.
@@ -222,7 +224,8 @@ export default function QuizEditor() {
           // From now on it is an existing Quiz at its new Difficulty, also after a reload.
           navigate(`/szerkeszto/${encodeURIComponent(subject)}/${target}`, { replace: true, state: null })
         }
-      } else if (outcome.status === 'conflict') {
+      } else if (outcome.status === 'occupied') {
+        setOccupant(outcome.occupied[0])
         setConfirm('overwrite')
       } else if (outcome.status === 'invalid') {
         setRows(saving.map((row, i) => ({ ...row, error: outcome.errors.find((error) => error.row === i) })))
@@ -371,7 +374,6 @@ export default function QuizEditor() {
   }
 
   const rowsWithErrors = rows.filter((row) => row.error).length
-  const occupant = otherQuizzes.find((quiz) => quiz.difficulty === targetDifficulty)
 
   return (
     <Screen title={title} back={back} wide>

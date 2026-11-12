@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router'
 import { Alert, Box, Button, ButtonBase, CircularProgress, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material'
-import { fetchQuizzes, fetchSubjects, saveQuiz, type QuizSummary, type Subject, type ValidationError } from '../api.ts'
+import { fetchQuizzes, fetchSubjects, saveQuiz, type QuizRef, type QuizSummary, type Subject, type ValidationError } from '../api.ts'
 import { readQuizFile } from '../editor/upload.ts'
 import ConfirmDialog from './ConfirmDialog.tsx'
 import Screen from './Screen.tsx'
@@ -38,6 +38,8 @@ export default function Editor() {
   const fileInput = useRef<HTMLInputElement>(null)
   // An uploaded Quiz waiting for the user to confirm replacing the one at its Difficulty.
   const [pendingUpload, setPendingUpload] = useState<UploadedQuiz>()
+  // The Quiz at the upload's Difficulty, as the server named it when the save was refused.
+  const [occupant, setOccupant] = useState<QuizRef>()
   const [uploadResult, setUploadResult] = useState<UploadResult>()
 
   useEffect(() => {
@@ -68,10 +70,13 @@ export default function Editor() {
       if (outcome.status === 'saved') {
         setUploadResult({ status: 'saved', name: upload.quiz.name ?? '', difficulty: upload.difficulty })
         setQuizzes({ subject, list: await fetchQuizzes(subject) })
-      } else if (outcome.status === 'conflict') {
+      } else if (outcome.status === 'occupied') {
+        setOccupant(outcome.occupied[0])
         setPendingUpload(upload)
-      } else {
+      } else if (outcome.status === 'invalid') {
         setUploadResult({ status: 'invalid', errors: outcome.errors })
+      } else {
+        setUploadResult({ status: 'failed' })
       }
     } catch {
       setUploadResult({ status: 'failed' })
@@ -93,7 +98,6 @@ export default function Editor() {
     else setUploadResult({ status: 'refused', message: read.message })
   }
 
-  const occupant = list?.find((quiz) => quiz.difficulty === pendingUpload?.difficulty)
 
   const create = () => {
     const state: NewQuizState = { newQuizName: name.trim() }

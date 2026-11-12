@@ -37,7 +37,7 @@ public sealed class QuizLibrary(DataPaths paths, ILogger<QuizLibrary> logger)
     {
         if (!QuizLayout.IsSubjectKey(key)) return null;
         // The folder name is the key, whatever the file says.
-        return TryRead<Subject>(SubjectFile(key)) is { Name: not null } subject ? subject with { Key = key } : null;
+        return JsonFile.TryRead<Subject>(SubjectFile(key), logger) is { Name: not null } subject ? subject with { Key = key } : null;
     }
 
     /// <summary>
@@ -177,23 +177,10 @@ public sealed class QuizLibrary(DataPaths paths, ILogger<QuizLibrary> logger)
     {
         if (!File.Exists(file)) return null;
         // The file name is the Difficulty, whatever the file says.
-        if (TryRead<Quiz>(file) is { Name: not null, Questions: { } questions } quiz && questions.All(question => question?.Type is not null))
+        if (JsonFile.TryRead<Quiz>(file, logger) is { Name: not null, Questions: { } questions } quiz && questions.All(question => question?.Type is not null))
             return quiz with { Difficulty = difficulty };
 
         logger.LogWarning("Quiz file {File} is broken; it is left out", file);
         return null;
-    }
-
-    private T? TryRead<T>(string file) where T : class
-    {
-        try
-        {
-            return File.Exists(file) ? JsonFile.Read<T>(file) : null;
-        }
-        catch (Exception exception) when (exception is JsonException or IOException)
-        {
-            logger.LogWarning(exception, "File {File} cannot be read; it is left out", file);
-            return null;
-        }
     }
 }

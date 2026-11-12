@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: []
 ---
 
@@ -13,7 +13,9 @@ Forrás: architektúra-áttekintés (2026-11-12), 2. jelölt, adapter-rész.
 - A két képernyő a foglaló nevét a válaszból vegye, ne a listából.
 - A közös „mentés felülírás-megerősítéssel” folyamat és a hibalista-megjelenítő külön döntés, ez a ticket nem foglalkozik vele.
 
-- [ ] Teszt stubolt `fetch`-csel: 409 → `occupied` a QuizRef-ekkel
-- [ ] A `QuizEditor` és az `Editor` nem keresi a foglalót a Quiz-listában
+- [x] Teszt stubolt `fetch`-csel: 409 → `occupied` a QuizRef-ekkel
+- [x] A `QuizEditor` és az `Editor` nem keresi a foglalót a Quiz-listában
 
 ## Comments
+
+- 2026-11-12: Elkészült. Az `api.ts` `SaveOutcome` típusa most `saved | invalid | occupied (QuizRef[]) | notFound`. Foglalt Subject-kulcsnál a szerver nem küld törzset, ilyenkor a kimenetel `occupied`, üres listával. A `QuizEditor` és az `Editor` a foglalót a szerver válaszából veszi, a `Settings` a `notFound`-ot hibaként mutatja. Teszt: `web/src/api.test.ts`. Böngészőben még nincs kipróbálva.

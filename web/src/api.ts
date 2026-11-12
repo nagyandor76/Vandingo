@@ -72,8 +72,15 @@ export interface ValidationError {
   message: string
 }
 
-/** How a save went: saved, rejected with the reasons, or rejected because the key or place is taken. */
-export type SaveOutcome = { status: 'saved' } | { status: 'invalid'; errors: ValidationError[] } | { status: 'conflict' }
+/**
+ * How a save went, as the server tells it: saved, rejected with the reasons, rejected because the key or
+ * Difficulty is taken (naming the Quizzes there, if it is about Quizzes), or the Subject is not there.
+ */
+export type SaveOutcome =
+  | { status: 'saved' }
+  | { status: 'invalid'; errors: ValidationError[] }
+  | { status: 'occupied'; occupied: QuizRef[] }
+  | { status: 'notFound' }
 
 async function send(method: 'POST' | 'PUT', path: string, body: unknown): Promise<SaveOutcome> {
   const response = await fetch(path, {
@@ -86,7 +93,13 @@ async function send(method: 'POST' | 'PUT', path: string, body: unknown): Promis
     const { errors } = (await response.json()) as { errors?: ValidationError[] }
     if (errors) return { status: 'invalid', errors }
   }
-  if (response.status === 409) return { status: 'conflict' }
+  if (response.status === 409) {
+    // A taken Subject key comes without a body; an occupied Difficulty names its Quiz.
+    const text = await response.text()
+    const { occupied = [] } = (text ? JSON.parse(text) : {}) as { occupied?: QuizRef[] }
+    return { status: 'occupied', occupied }
+  }
+  if (response.status === 404) return { status: 'notFound' }
   throw new Error(`${path}: ${response.status}`)
 }
 

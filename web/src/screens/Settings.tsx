@@ -200,10 +200,12 @@ function NewSubject({ takenKeys, onCreated }: { takenKeys: string[]; onCreated: 
         setName('')
         setKey('')
         onCreated()
-      } else if (outcome.status === 'conflict') {
+      } else if (outcome.status === 'occupied') {
         setProblem('Ez a kulcs már foglalt.')
-      } else {
+      } else if (outcome.status === 'invalid') {
         setProblem(outcome.errors.map((error) => error.message).join(' '))
+      } else {
+        setProblem('Nem sikerült létrehozni a tantárgyat.')
       }
     } catch {
       setProblem('Nem sikerült létrehozni a tantárgyat.')
