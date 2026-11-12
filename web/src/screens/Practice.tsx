@@ -263,7 +263,7 @@ function WordMatching({ block, selection, onTap }: { block: Block; selection?: S
   )
 }
 
-/** One word or meaning: a paired one shows its pair's number and colour, a scored one green or red. */
+/** One word or meaning: a paired one shows its pair's number in a faded green, a scored one green or red. */
 function Tile({ text, pairNumber, tone, selected, onClick }: {
   text: string
   pairNumber?: number
@@ -272,9 +272,10 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
   onClick: () => void
 }) {
   const theme = useTheme()
-  const { pairs } = theme.palette
-  const pairColor = pairNumber === undefined ? undefined : pairs[(pairNumber - 1) % pairs.length]
-  const color = tone ? theme.palette[tone].main : selected ? theme.palette.primary.main : pairColor ?? theme.palette.divider
+  const { primary } = theme.palette
+  // A paired item keeps the selection's green, faded; its number tells which pair it is in.
+  const paired = pairNumber !== undefined
+  const color = tone ? theme.palette[tone].main : selected ? primary.main : paired ? alpha(primary.main, 0.45) : theme.palette.divider
 
   return (
     <ButtonBase
@@ -289,13 +290,13 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
         textAlign: 'left',
         borderRadius: 1,
         border: `1.5px solid ${color}`,
-        bgcolor: tone ? theme.palette[tone].soft : selected ? theme.palette.primary.soft : pairColor ? alpha(pairColor, 0.1) : 'background.paper',
-        boxShadow: selected ? `0 0 0 3px ${theme.palette.primary.soft}` : '0 1px 2px rgba(16,24,40,0.06)',
+        bgcolor: tone ? theme.palette[tone].soft : selected ? primary.soft : paired ? alpha(primary.soft, 0.5) : 'background.paper',
+        boxShadow: selected ? `0 0 0 3px ${primary.soft}` : '0 1px 2px rgba(16,24,40,0.06)',
         transition: 'background-color 120ms, border-color 120ms, box-shadow 120ms',
         ...(tone && { pointerEvents: 'none' }),
       }}
     >
-      {pairNumber !== undefined && (
+      {paired && (
         <Box
           sx={{
             flex: 'none',
@@ -306,8 +307,9 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
             placeItems: 'center',
             fontSize: 13,
             fontWeight: 700,
-            color: 'common.white',
-            bgcolor: tone ? theme.palette[tone].main : pairColor,
+            color: tone ? 'common.white' : primary.dark,
+            bgcolor: tone ? theme.palette[tone].main : primary.soft,
+            ...(!tone && { border: `1px solid ${alpha(primary.main, 0.45)}` }),
           }}
         >
           {pairNumber}
