@@ -1,5 +1,5 @@
-// A thin adapter over the browser's speech synthesis and Web Audio. The Practice engine only says
-// what to read aloud; this is where it is spoken and where the Block sounds are played.
+// A thin adapter over the browser's speech synthesis and Web Audio: the Practice's audio port in the browser.
+// The Practice decides what to read aloud and when; this is where it is spoken and where the Block sounds are played.
 
 import type { Speech } from './practice/engine.ts'
 
@@ -27,13 +27,15 @@ export function stopSpeaking() {
 let context: AudioContext | undefined
 
 /**
- * Mobile browsers (iOS Safari above all) only let a page make sound after a tap. Call this from a tap
- * handler, so speech and sounds that follow without a tap of their own are allowed too.
+ * Mobile browsers (iOS Safari above all) only let a page make sound after a tap. The page's first tap,
+ * wherever it lands, unlocks it, so speech and sounds that follow without a tap of their own are allowed too.
  */
-export function unlockAudio() {
+function unlockAudio() {
   if (synth) synth.speak(new SpeechSynthesisUtterance(''))
   audioContext()?.resume()
 }
+
+if (typeof window !== 'undefined') window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true })
 
 function audioContext() {
   if (!context && typeof AudioContext !== 'undefined') context = new AudioContext()

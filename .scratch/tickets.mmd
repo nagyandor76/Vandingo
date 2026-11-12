@@ -1,4 +1,11 @@
 flowchart LR
+  subgraph architecture_followups_feature["architecture-followups"]
+    architecture_followups_1["01: Az `api.ts` adja vissza a foglaló Quizeket a Quiz mentésénél<br/><small>ready-for-agent</small>"]:::ready_for_agent
+    architecture_followups_2["02: Egy sérült Result-fájl ne vigye el a teljes Result-listát<br/><small>ready-for-agent</small>"]:::ready_for_agent
+  end
+  subgraph practice_module_feature["practice-module"]
+    practice_module_1["01: Practice modul – a Practice életciklusa egy helyen<br/><small>ready-for-agent</small>"]:::ready_for_agent
+  end
   subgraph vandingo_mvp_feature["vandingo-mvp"]
     vandingo_mvp_1["01: Alapváz – üres alkalmazás, amely elindul<br/><small>done</small>"]:::done
     vandingo_mvp_2["02: A Practice indítóképernyője<br/><small>done</small>"]:::done

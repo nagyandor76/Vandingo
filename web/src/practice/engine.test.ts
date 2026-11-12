@@ -5,10 +5,10 @@ import {
   currentBlock,
   isPassed,
   next,
-  pair,
+  readAloud,
   startPractice,
+  tap,
   tick,
-  unpair,
   usableTypes,
   type PracticeInput,
   type PracticeQuestion,
@@ -76,6 +76,11 @@ const fruits: [string, string][] = [
 ]
 
 const words = (count: number) => fruits.slice(0, count).map(([english, hungarian]) => wordPair(english, hungarian))
+
+/** Taps a word, then a meaning. */
+const pairByTaps = (state: PracticeState, word: number, meaning: number) => tap(tap(state, 'word', word), 'meaning', meaning)
+
+const pairing = (state: PracticeState) => currentBlock(state).questions.map((entry) => entry.paired)
 
 const shownTexts = (state: PracticeState) => state.blocks.flatMap((block) => block.questions.map((entry) => entry.question.text))
 
@@ -290,12 +295,24 @@ describe('word-matching in a Practice', () => {
     expect(blockTypes([...statements(6), ...words(5)], 0.5)).toEqual(['true-false', 'word-matching', 'true-false'])
   })
 
+  it('pairs a word and a meaning in two taps, starting on either side', () => {
+    let state = start(words(5))
+    state = tap(state, 'word', 0)
+    expect(state.selection).toEqual({ side: 'word', index: 0 })
+    state = tap(state, 'meaning', 2)
+    state = tap(state, 'meaning', 1)
+    state = tap(state, 'word', 3)
+
+    expect(pairing(state)).toEqual([2, undefined, undefined, 1, undefined])
+    expect(state.selection).toBeUndefined()
+  })
+
   it('scores the Block pair by pair once every word is paired', () => {
     let state = start(words(5))
-    for (const [word, meaning] of [[0, 0], [1, 2], [2, 1], [3, 3]]) state = pair(state, word, meaning)
+    for (const [word, meaning] of [[0, 0], [1, 2], [2, 1], [3, 3]]) state = pairByTaps(state, word, meaning)
     expect(currentBlock(state).closed).toBe(false)
 
-    state = pair(state, 4, 4)
+    state = pairByTaps(state, 4, 4)
 
     expect(currentBlock(state).closed).toBe(true)
     expect(currentBlock(state).questions.map((entry) => entry.correct)).toEqual([true, false, false, true, true])
@@ -303,7 +320,7 @@ describe('word-matching in a Practice', () => {
   })
 
   it('cannot close a word-matching Block before every word is paired', () => {
-    let state = pair(start(words(5)), 0, 0)
+    let state = pairByTaps(start(words(5)), 0, 0)
 
     state = closeBlock(state)
 
@@ -311,34 +328,52 @@ describe('word-matching in a Practice', () => {
     expect(state.result).toBeUndefined()
   })
 
-  it('takes a pair apart until the Block is scored', () => {
-    const pairing = (state: PracticeState) => currentBlock(state).questions.map((entry) => entry.paired)
-    let state = start(words(5))
-    state = pair(state, 0, 1)
-
-    state = unpair(state, 0)
+  it('takes a pair apart when either of its halves is tapped, even with the other side selected', () => {
+    let state = pairByTaps(start(words(5)), 0, 1)
+    state = tap(state, 'word', 0)
     expect(pairing(state)).toEqual([undefined, undefined, undefined, undefined, undefined])
 
-    for (const i of [0, 1, 2, 3, 4]) state = pair(state, i, i)
-    state = unpair(state, 4)
-    expect(pairing(state)).toEqual([0, 1, 2, 3, 4])
-    expect(currentBlock(state).questions.every((entry) => entry.correct)).toBe(true)
+    state = pairByTaps(state, 0, 1)
+    state = tap(state, 'word', 2)
+    state = tap(state, 'meaning', 1)
+    expect(pairing(state)).toEqual([undefined, undefined, undefined, undefined, undefined])
+    expect(state.selection).toBeUndefined()
   })
 
-  it('moves a meaning to the word it is paired with next, leaving its former word unpaired', () => {
-    let state = start(words(5))
-    state = pair(state, 0, 2)
-    state = pair(state, 1, 2)
+  it('selects again on the same side, and lets go of the selection when it is tapped again', () => {
+    let state = tap(start(words(5)), 'word', 0)
+    state = tap(state, 'word', 1)
+    expect(state.selection).toEqual({ side: 'word', index: 1 })
 
-    expect(currentBlock(state).questions.map((entry) => entry.paired)).toEqual([undefined, 2, undefined, undefined, undefined])
+    state = tap(state, 'word', 1)
+    expect(state.selection).toBeUndefined()
+  })
+
+  it('lets go of a selection when time runs out', () => {
+    const { clock, advance } = manualClock()
+    let state = tap(start(words(5), { clock }), 'word', 0)
+
+    advance(50)
+    state = tick(state)
+
+    expect(state.selection).toBeUndefined()
+  })
+
+  it('ignores taps once the Block is scored', () => {
+    let state = start(words(5))
+    for (const i of [0, 1, 2, 3, 4]) state = pairByTaps(state, i, i)
+    state = tap(state, 'word', 4)
+
+    expect(pairing(state)).toEqual([0, 1, 2, 3, 4])
+    expect(state.selection).toBeUndefined()
   })
 
   it('when time runs out mid-Block, scores the pairs made and counts the unpaired words as wrong', () => {
     const { clock, advance } = manualClock()
     let state = start(words(7), { clock })
-    state = pair(state, 0, 0)
-    state = pair(state, 1, 2)
-    state = pair(state, 3, 3)
+    state = pairByTaps(state, 0, 0)
+    state = pairByTaps(state, 1, 2)
+    state = pairByTaps(state, 3, 3)
 
     advance(70)
     state = tick(state)
@@ -420,6 +455,49 @@ describe('reading aloud and Block scoring signals', () => {
     expect(state.speech).toBeUndefined()
   })
 
+  it('reads an English word aloud each time it is tapped, but never its Hungarian meaning', () => {
+    let state = start(
+      words(5).map((question) => ({ ...question, speak_text: 'en-GB' })),
+      { random: inOrder },
+    )
+
+    state = tap(state, 'word', 0)
+    const first = state.speech
+    expect(first).toEqual({ text: 'apple', lang: 'en-GB' })
+
+    state = tap(state, 'word', 0)
+    expect(state.speech).toEqual(first)
+    expect(state.speech).not.toBe(first)
+
+    const before = state.speech
+    state = tap(state, 'meaning', 3)
+    expect(state.speech).toBe(before)
+  })
+
+  it('reads nothing when a word is tapped in a scored Block', () => {
+    let state = start(words(5).map((question) => ({ ...question, speak_text: 'en-GB' })))
+    for (const i of [0, 1, 2, 3, 4]) state = pairByTaps(state, i, i)
+    const before = state.speech
+
+    state = tap(state, 'word', 0)
+
+    expect(state.speech).toBe(before)
+  })
+
+  it('reads a statement aloud again on request, even once its Block is scored', () => {
+    let state = start([spoken('A'), spoken('B'), trueFalse('C')], { random: inOrder })
+    state = closeBlock(state)
+
+    state = readAloud(state, 1)
+    const again = state.speech
+    expect(again).toEqual({ text: 'B', lang: 'hu-HU' })
+    state = readAloud(state, 1)
+    expect(state.speech).not.toBe(again)
+
+    state = readAloud(state, 2)
+    expect(state.speech).toEqual({ text: 'B', lang: 'hu-HU' })
+  })
+
   it('tells whether every answer of a scored Block was correct', () => {
     let state = start(statements(6), { random: inOrder })
     expect(currentBlock(state).allCorrect).toBeUndefined()
@@ -435,7 +513,7 @@ describe('reading aloud and Block scoring signals', () => {
   })
 
   it('tells whether every pair of a scored word-matching Block was correct', () => {
-    const pairAll = (meanings: number[]) => meanings.reduce((state, meaning, word) => pair(state, word, meaning), start(words(5)))
+    const pairAll = (meanings: number[]) => meanings.reduce((state, meaning, word) => pairByTaps(state, word, meaning), start(words(5)))
 
     expect(currentBlock(pairAll([0, 1, 2, 3, 4])).allCorrect).toBe(true)
     expect(currentBlock(pairAll([1, 0, 2, 3, 4])).allCorrect).toBe(false)

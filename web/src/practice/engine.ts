@@ -106,10 +106,12 @@ export interface PracticeState {
   /** The Participant moved on from the last Block: show the summary. */
   finished: boolean
   /**
-   * The latest statement to read aloud automatically. A new one is a new object; it stays the same object
-   * until the next one, so it is read only once. Unset while the topmost unanswered statement has no `speak_text`.
+   * The latest text to read aloud: the topmost unanswered statement, or one the Participant asked for.
+   * A new one is a new object; it stays the same object until the next one, so it is read only once.
    */
   speech?: Speech
+  /** Word-matching: the word or meaning tapped first, waiting for the other half of its pair. */
+  selection?: Selection
   clock: () => number
   startedAt: number
 }
@@ -152,10 +154,52 @@ function announce(state: PracticeState): PracticeState {
 }
 
 /**
+ * Reads a Question of the current Block aloud on request, even once the Block is scored; without a
+ * `speak_text` nothing is read. Each request is a new speech, so the same text can be heard again.
+ */
+export function readAloud(state: PracticeState, questionIndex: number): PracticeState {
+  const speech = speechOf(currentBlock(state).questions[questionIndex].question)
+  return speech ? { ...state, speech } : state
+}
+
+/** A word-matching column: the English words, or their Hungarian meanings. */
+export type Side = 'word' | 'meaning'
+
+/** A tapped word or meaning, by its Question's index in the Block. */
+export interface Selection {
+  side: Side
+  index: number
+}
+
+/**
+ * Taps a word or a meaning of the current word-matching Block, given by its Question's index in the Block.
+ * Two taps on opposite sides make a pair, starting on either side; tapping a paired word or meaning takes its
+ * pair apart. Tapping the selected one again lets go of it; a scored Block ignores taps.
+ */
+export function tap(tapped: PracticeState, side: Side, index: number): PracticeState {
+  const block = currentBlock(tapped)
+  if (block.closed || block.type !== 'word-matching') return tapped
+  // An English word is read aloud whatever the tap does; a Hungarian meaning stays silent.
+  const state = side === 'word' ? readAloud(tapped, index) : tapped
+  const { selection } = state
+  const pairedWord =
+    side === 'word'
+      ? block.questions[index].paired === undefined ? -1 : index
+      : block.questions.findIndex((entry) => entry.paired === index)
+  if (pairedWord >= 0) return { ...unpair(state, pairedWord), selection: undefined }
+  if (!selection || selection.side === side) {
+    const same = selection?.side === side && selection.index === index
+    return { ...state, selection: same ? undefined : { side, index } }
+  }
+  const [word, meaning] = side === 'word' ? [index, selection.index] : [selection.index, index]
+  return { ...pair(state, word, meaning), selection: undefined }
+}
+
+/**
  * Pairs a word of the current word-matching Block with a meaning, both given by their Question's index
  * in the Block. A pair either one was in comes apart. Once every word is paired, the Block is scored.
  */
-export function pair(state: PracticeState, word: number, meaning: number): PracticeState {
+function pair(state: PracticeState, word: number, meaning: number): PracticeState {
   const block = currentBlock(state)
   if (block.closed || block.type !== 'word-matching') return state
   const questions = block.questions.map((entry, i) =>
@@ -165,7 +209,7 @@ export function pair(state: PracticeState, word: number, meaning: number): Pract
 }
 
 /** Takes the pair of a word of the current word-matching Block apart; a scored Block ignores it. */
-export function unpair(state: PracticeState, word: number): PracticeState {
+function unpair(state: PracticeState, word: number): PracticeState {
   const block = currentBlock(state)
   if (block.closed || block.type !== 'word-matching') return state
   const questions = block.questions.map((entry, i) => (i === word ? { ...entry, paired: undefined } : entry))
@@ -208,7 +252,7 @@ function scoreCurrentBlock(state: PracticeState): PracticeState {
     correct: block.type === 'word-matching' ? entry.paired === i : entry.given === entry.question.answer[0],
   }))
   const allCorrect = questions.every((entry) => entry.correct)
-  return withCurrentBlock(state, { ...block, questions, closed: true, allCorrect })
+  return { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
 }
 
 /** Moves on from a closed Block to the next one, or to the summary once the Practice has its Result. */

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Alert, Button, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { fetchQuizzes, fetchSubjects, type QuizSummary, type Subject } from '../api.ts'
-import { unlockAudio } from '../audio.ts'
 import type { Participant } from '../participants.ts'
 import { usableTypes, type QuestionType } from '../practice/engine.ts'
 import ParticipantPicker from './ParticipantPicker.tsx'
@@ -64,8 +63,6 @@ export default function PracticeStart() {
   const notEnough = quizzes !== undefined && quizzes.length > 0 && !startable
 
   const start = () => {
-    // The first statement is read aloud without a tap of its own, which mobile browsers allow only after this one.
-    unlockAudio()
     const query = new URLSearchParams({ participant: participant!, subject, from: String(from), to: String(to) })
     navigate(`/kitoltes/gyakorlas?${query}`)
   }

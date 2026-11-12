@@ -1,33 +1,42 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router'
 import { Alert, alpha, Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography, useTheme } from '@mui/material'
-import { fetchQuestions, fetchQuizzes, fetchSubjects, saveResult, type NewResult } from '../api.ts'
-import { quizNamesOf } from '../resultLabels.ts'
-import { playBlockSound, speak, stopSpeaking, unlockAudio } from '../audio.ts'
+import { fetchQuestions, fetchQuizzes, fetchSubjects, saveResult } from '../api.ts'
+import { playBlockSound, speak, stopSpeaking } from '../audio.ts'
 import {
-  answer,
-  closeBlock,
-  currentBlock,
-  isPassed,
-  next,
-  pair,
-  speechOf,
-  startPractice,
-  tick,
-  unpair,
+  createPractice,
   type Block,
   type BlockQuestion,
+  type Practice as RunningPractice,
   type PracticeResult,
-  type PracticeState,
+  type PracticeSnapshot,
+  type SaveStatus,
+  type Selection,
+  type Side,
   type TrueFalseAnswer,
-} from '../practice/engine.ts'
+} from '../practice/practice.ts'
 import { formatTime } from '../format.ts'
 import Screen from './Screen.tsx'
 
-type SaveStatus = 'saving' | 'saved' | 'failed'
+const data = { fetchSubjects, fetchQuestions, fetchQuizzes, saveResult }
+const audio = { speak, stop: stopSpeaking, playBlockSound }
 
-/** With the Subject's auto_advance on, how long a scored Block stays on screen. */
-const autoAdvanceMs = 2000
+const loading: PracticeSnapshot = { phase: 'loading' }
+const noSubscription = () => () => {}
+const loadingSnapshot = () => loading
+
+/** Runs one Practice while the screen shows it; leaving the screen ends it. */
+function usePractice(participant: string, subject: string, from: number, to: number, complete: boolean) {
+  const [practice, setPractice] = useState<RunningPractice>()
+  useEffect(() => {
+    if (!complete) return
+    const started = createPractice({ participant, subject, from, to }, { data, audio })
+    setPractice(started)
+    return () => started.dispose()
+  }, [participant, subject, from, to, complete])
+  const snapshot = useSyncExternalStore(practice?.subscribe ?? noSubscription, practice?.getSnapshot ?? loadingSnapshot)
+  return { practice, snapshot }
+}
 
 /** One Practice, from the first Block to the summary. Leaving before the end saves nothing. */
 export default function Practice() {
@@ -38,85 +47,7 @@ export default function Practice() {
   const to = Number(params.get('to'))
   // Only reachable from the start screen; a hand-typed address may lack any of these.
   const complete = Boolean(participant && subject && from && to)
-
-  const [subjectName, setSubjectName] = useState('')
-  const [autoAdvance, setAutoAdvance] = useState(false)
-  const [state, setState] = useState<PracticeState>()
-  const [loadError, setLoadError] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>()
-  const quizNames = useRef<{ quizNameFrom?: string; quizNameTo?: string }>({})
-  const savedResult = useRef<PracticeResult>(undefined)
-
-  useEffect(() => {
-    if (!complete) return
-    let current = true
-    // The names are best effort: a Result without them is still a Result.
-    const names = fetchQuizzes(subject).then((quizzes) => quizNamesOf(quizzes, from, to), () => ({}))
-    Promise.all([fetchSubjects(), fetchQuestions(subject, from, to), names]).then(
-      ([subjects, questions, quizNamesAtStart]) => {
-        const settings = subjects.find((s) => s.key === subject)
-        if (!current) return
-        if (!settings) return setLoadError(true)
-        quizNames.current = quizNamesAtStart
-        setSubjectName(settings.name)
-        setAutoAdvance(settings.auto_advance)
-        setState(startPractice({ questions, settings, random: Math.random, clock: Date.now }))
-      },
-      () => current && setLoadError(true),
-    )
-    return () => {
-      current = false
-    }
-  }, [complete, subject, from, to])
-
-  const running = state !== undefined && state.blocks.length > 0 && !state.result
-  useEffect(() => {
-    if (!running) return
-    const timer = setInterval(() => setState((s) => s && tick(s)), 250)
-    return () => clearInterval(timer)
-  }, [running])
-
-  // A new statement to read aloud is a new object; the same one is never read twice.
-  const speech = state?.speech
-  useEffect(() => {
-    if (speech) speak(speech)
-  }, [speech])
-  useEffect(() => stopSpeaking, [])
-  // Opened without the start screen (e.g. reloaded), sound is allowed only after a tap here.
-  useEffect(() => {
-    window.addEventListener('pointerdown', unlockAudio, { once: true })
-    return () => window.removeEventListener('pointerdown', unlockAudio)
-  }, [])
-
-  // One sound per scored Block, cutting off any reading, then on to the next one if the Subject says so.
-  const blockIndex = state?.blockIndex
-  const allCorrect = state && state.blocks.length > 0 ? currentBlock(state).allCorrect : undefined
-  useEffect(() => {
-    if (allCorrect === undefined) return
-    stopSpeaking()
-    playBlockSound(allCorrect)
-    if (!autoAdvance) return
-    const timer = setTimeout(() => setState((s) => s && next(s)), autoAdvanceMs)
-    return () => clearTimeout(timer)
-  }, [blockIndex, allCorrect, autoAdvance])
-
-  const result = state?.result
-  const save = useCallback(() => {
-    if (!result) return
-    setSaveStatus('saving')
-    const submitted: NewResult = { participant, subject, difficultyFrom: from, difficultyTo: to, ...quizNames.current, ...result }
-    saveResult(submitted).then(
-      () => setSaveStatus('saved'),
-      () => setSaveStatus('failed'),
-    )
-  }, [result, participant, subject, from, to])
-
-  // The Result is saved as soon as there is one: after the last Block, or when time runs out.
-  useEffect(() => {
-    if (!result || savedResult.current === result) return
-    savedResult.current = result
-    save()
-  }, [result, save])
+  const { practice, snapshot } = usePractice(participant, subject, from, to, complete)
 
   if (!complete) {
     return (
@@ -128,34 +59,33 @@ export default function Practice() {
       </Screen>
     )
   }
-  if (loadError) {
+  if (snapshot.phase === 'load-failed') {
     return (
       <Screen title="Gyakorlás">
         <Alert severity="error">Nem sikerült betölteni a kérdéseket.</Alert>
       </Screen>
     )
   }
-  if (!state) {
+  if (!practice || snapshot.phase === 'loading') {
     return (
       <Screen title="Gyakorlás">
         <CircularProgress sx={{ alignSelf: 'center' }} />
       </Screen>
     )
   }
-  if (state.blocks.length === 0) {
+  if (snapshot.phase === 'empty') {
     return (
       <Screen title="Gyakorlás">
         <Alert severity="info">Ebben a tartományban nincs elég kitölthető kérdés.</Alert>
       </Screen>
     )
   }
-  if (state.finished) {
-    return <Summary result={state.result!} saveStatus={saveStatus} onRetry={save} />
+  if (snapshot.phase === 'finished') {
+    return <Summary result={snapshot.result} passed={snapshot.passed} saveStatus={snapshot.saveStatus} onRetry={practice.retrySave} />
   }
 
-  const block = currentBlock(state)
-  const progress = (state.blockIndex + (block.closed ? 1 : 0)) / state.blocks.length
-  const correctCount = block.questions.filter((entry) => entry.correct).length
+  const { block, blockIndex, blockCount, progress, correctInBlock, remainingSeconds, resultReady, timedOut } = snapshot
+  const allCorrect = block.allCorrect
 
   return (
     <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -173,9 +103,9 @@ export default function Practice() {
         </Box>
         <Typography
           aria-label="Hátralévő idő"
-          sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: state.remainingSeconds <= 10 ? 'error.main' : 'text.primary' }}
+          sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: remainingSeconds <= 10 ? 'error.main' : 'text.primary' }}
         >
-          {formatTime(state.remainingSeconds)}
+          {formatTime(remainingSeconds)}
         </Typography>
       </Stack>
 
@@ -185,23 +115,19 @@ export default function Practice() {
             {block.type === 'word-matching' ? 'Párosítsd össze!' : 'Igaz vagy hamis?'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {subjectName} · {state.blockIndex + 1}/{state.blocks.length}
+            {snapshot.subjectName} · {blockIndex + 1}/{blockCount}
           </Typography>
         </Stack>
         {block.type === 'word-matching' ? (
-          <WordMatching
-            key={state.blockIndex}
-            block={block}
-            onPair={(word, meaning) => setState((s) => s && pair(s, word, meaning))}
-            onUnpair={(word) => setState((s) => s && unpair(s, word))}
-          />
+          <WordMatching block={block} selection={snapshot.selection} onTap={practice.tap} />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
-              key={`${state.blockIndex}-${i}`}
+              key={`${blockIndex}-${i}`}
               entry={entry}
               closed={block.closed}
-              onAnswer={(value) => setState((s) => s && answer(s, i, value))}
+              onAnswer={(value) => practice.answer(i, value)}
+              onReadAloud={() => practice.readAloud(i)}
             />
           ))
         )}
@@ -222,18 +148,13 @@ export default function Practice() {
         <Stack direction="row" spacing={1.5} sx={{ maxWidth: 600, mx: 'auto', alignItems: 'center' }}>
           {block.closed && (
             <Typography sx={{ flex: 1, fontWeight: 700, color: allCorrect ? 'success.main' : 'error.main' }}>
-              {state.result && state.remainingSeconds === 0 ? 'Lejárt az idő. ' : ''}
-              {allCorrect ? 'Mind helyes.' : `${correctCount} / ${block.questions.length} helyes`}
+              {timedOut ? 'Lejárt az idő. ' : ''}
+              {allCorrect ? 'Mind helyes.' : `${correctInBlock} / ${block.questions.length} helyes`}
             </Typography>
           )}
           {block.closed ? (
-            <Button
-              variant="contained"
-              color={allCorrect ? 'primary' : 'error'}
-              sx={{ minWidth: 140 }}
-              onClick={() => setState((s) => s && next(s))}
-            >
-              {state.result ? 'Eredmény' : 'Következő'}
+            <Button variant="contained" color={allCorrect ? 'primary' : 'error'} sx={{ minWidth: 140 }} onClick={practice.next}>
+              {resultReady ? 'Eredmény' : 'Következő'}
             </Button>
           ) : block.type === 'word-matching' ? (
             // A word-matching Block is scored as soon as every word is paired.
@@ -241,7 +162,7 @@ export default function Practice() {
               Koppints egy szóra, majd a párjára.
             </Typography>
           ) : (
-            <Button variant="contained" fullWidth onClick={() => setState((s) => s && closeBlock(s))}>
+            <Button variant="contained" fullWidth onClick={practice.close}>
               Kész
             </Button>
           )}
@@ -253,23 +174,23 @@ export default function Practice() {
 
 const answerLabels: Record<TrueFalseAnswer, string> = { true: 'Igaz', false: 'Hamis' }
 
-function readAloud(question: BlockQuestion['question']) {
-  const speech = speechOf(question)
-  if (speech) speak(speech)
-}
-
 /**
  * One true–false statement; tapping its text reads it aloud again. Once closed, a correct one turns green
  * with the given answer marked; a wrong or missing one turns red with the correct answer marked, in red.
  */
-function Statement({ entry, closed, onAnswer }: { entry: BlockQuestion; closed: boolean; onAnswer: (value: TrueFalseAnswer) => void }) {
+function Statement({ entry, closed, onAnswer, onReadAloud }: {
+  entry: BlockQuestion
+  closed: boolean
+  onAnswer: (value: TrueFalseAnswer) => void
+  onReadAloud: () => void
+}) {
   const tone = !closed ? undefined : entry.correct ? 'success' : 'error'
   const marked = closed && !entry.correct ? entry.question.answer[0] : entry.given
 
   return (
     <Paper sx={{ p: 1.5, ...(tone && { borderColor: `${tone}.main`, bgcolor: `${tone}.soft` }) }}>
       <Typography
-        onClick={() => readAloud(entry.question)}
+        onClick={onReadAloud}
         sx={{ fontWeight: 500, mb: 1.25, ...(entry.question.speak_text && { cursor: 'pointer' }) }}
       >
         {entry.question.text}
@@ -306,38 +227,15 @@ function Statement({ entry, closed, onAnswer }: { entry: BlockQuestion; closed: 
   )
 }
 
-type Side = 'word' | 'meaning'
-
 /**
  * A word-matching Block: the English words on the left, their meanings shuffled on the right.
  * Two taps make a pair, starting on either side; tapping a paired item takes its pair apart.
- * Tapping an English word also reads it aloud; a Hungarian meaning stays silent.
  * Once scored, each pair turns green or red; an unpaired item (time ran out) is red.
  */
-function WordMatching({ block, onPair, onUnpair }: {
-  block: Block
-  onPair: (word: number, meaning: number) => void
-  onUnpair: (word: number) => void
-}) {
-  const [selected, setSelected] = useState<{ side: Side; index: number }>()
+function WordMatching({ block, selection, onTap }: { block: Block; selection?: Selection; onTap: (side: Side, index: number) => void }) {
   const wordOf = (meaning: number) => {
     const word = block.questions.findIndex((entry) => entry.paired === meaning)
     return word < 0 ? undefined : word
-  }
-
-  const tap = (side: Side, index: number) => {
-    if (block.closed) return
-    if (side === 'word') readAloud(block.questions[index].question)
-    const pairedWord = side === 'word' ? (block.questions[index].paired === undefined ? undefined : index) : wordOf(index)
-    if (pairedWord !== undefined) {
-      onUnpair(pairedWord)
-      setSelected(undefined)
-    } else if (!selected || selected.side === side) {
-      setSelected(selected?.index === index && selected.side === side ? undefined : { side, index })
-    } else {
-      onPair(side === 'word' ? index : selected.index, side === 'word' ? selected.index : index)
-      setSelected(undefined)
-    }
   }
 
   const tile = (side: Side, index: number, text: string, word: number | undefined) => (
@@ -346,8 +244,8 @@ function WordMatching({ block, onPair, onUnpair }: {
       text={text}
       pairNumber={word === undefined ? undefined : word + 1}
       tone={!block.closed ? undefined : word !== undefined && block.questions[word].correct ? 'success' : 'error'}
-      selected={selected?.side === side && selected.index === index}
-      onClick={() => tap(side, index)}
+      selected={selection?.side === side && selection.index === index}
+      onClick={() => onTap(side, index)}
     />
   )
 
@@ -420,9 +318,12 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
   )
 }
 
-function Summary({ result, saveStatus, onRetry }: { result: PracticeResult; saveStatus?: SaveStatus; onRetry: () => void }) {
-  const passed = isPassed(result)
-
+function Summary({ result, passed, saveStatus, onRetry }: {
+  result: PracticeResult
+  passed: boolean
+  saveStatus: SaveStatus
+  onRetry: () => void
+}) {
   return (
     <Screen title="Eredmény">
       <Paper sx={{ p: 2.5, textAlign: 'center', ...(passed && { borderColor: 'success.main', bgcolor: 'success.soft' }) }}>
