@@ -98,7 +98,6 @@ export default function Editor() {
     else setUploadResult({ status: 'refused', message: read.message })
   }
 
-
   const create = () => {
     const state: NewQuizState = { newQuizName: name.trim() }
     navigate(`/szerkeszto/${encodeURIComponent(subject)}/${difficulty}`, { state })

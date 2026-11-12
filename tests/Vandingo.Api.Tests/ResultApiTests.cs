@@ -189,6 +189,8 @@ public class ResultApiTests
     [Theory]
     [InlineData("ez nem JSON")]
     [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData("""{ "participant": "Janka", "subject": "history" }""")]
     public async Task A_broken_Result_file_is_left_out_of_the_list_and_not_found_instead_of_failing_every_Result(string broken)
     {
         using var app = new VandingoApp();

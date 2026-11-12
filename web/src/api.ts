@@ -82,6 +82,12 @@ export type SaveOutcome =
   | { status: 'occupied'; occupied: QuizRef[] }
   | { status: 'notFound' }
 
+/** The Quizzes a 409 names; a taken Subject key comes without a body, so it names none. */
+async function occupiedBy(response: Response): Promise<QuizRef[]> {
+  const text = await response.text()
+  return (text ? (JSON.parse(text) as { occupied?: QuizRef[] }).occupied : undefined) ?? []
+}
+
 async function send(method: 'POST' | 'PUT', path: string, body: unknown): Promise<SaveOutcome> {
   const response = await fetch(path, {
     method,
@@ -93,12 +99,7 @@ async function send(method: 'POST' | 'PUT', path: string, body: unknown): Promis
     const { errors } = (await response.json()) as { errors?: ValidationError[] }
     if (errors) return { status: 'invalid', errors }
   }
-  if (response.status === 409) {
-    // A taken Subject key comes without a body; an occupied Difficulty names its Quiz.
-    const text = await response.text()
-    const { occupied = [] } = (text ? JSON.parse(text) : {}) as { occupied?: QuizRef[] }
-    return { status: 'occupied', occupied }
-  }
+  if (response.status === 409) return { status: 'occupied', occupied: await occupiedBy(response) }
   if (response.status === 404) return { status: 'notFound' }
   throw new Error(`${path}: ${response.status}`)
 }
@@ -190,7 +191,7 @@ export async function importZip(file: Blob, overwrite: boolean): Promise<ImportO
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: file })
   if (response.ok) return { status: 'imported', ...(await response.json()) }
   if (response.status === 400) return { status: 'invalid', ...(await response.json()) }
-  if (response.status === 409) return { status: 'occupied', ...(await response.json()) }
+  if (response.status === 409) return { status: 'occupied', occupied: await occupiedBy(response) }
   throw new Error(`${path}: ${response.status}`)
 }
 

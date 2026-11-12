@@ -13,17 +13,18 @@ public static class JsonFile
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    public static T Read<T>(string file) => JsonSerializer.Deserialize<T>(File.ReadAllText(file))!;
-
     /// <summary>
     /// Reads the file, or gives null if it is missing or cannot be read (not JSON, or the JSON <c>null</c>);
     /// a broken file is logged and left out, so it never takes the files next to it down with it.
     /// </summary>
     public static T? TryRead<T>(string file, ILogger logger) where T : class
     {
+        if (!File.Exists(file)) return null;
         try
         {
-            return File.Exists(file) ? JsonSerializer.Deserialize<T>(File.ReadAllText(file)) : null;
+            var value = JsonSerializer.Deserialize<T>(File.ReadAllText(file));
+            if (value is null) logger.LogWarning("File {File} holds no value; it is left out", file);
+            return value;
         }
         catch (Exception exception) when (exception is JsonException or IOException)
         {

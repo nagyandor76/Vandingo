@@ -19,7 +19,7 @@ public sealed class ResultStore(DataPaths paths, ILogger<ResultStore> logger)
         if (!Directory.Exists(paths.ResultsDirectory)) return [];
 
         return Directory.EnumerateFiles(paths.ResultsDirectory, "*.json")
-            .Select(file => JsonFile.TryRead<Result>(file, logger))
+            .Select(ReadResult)
             .OfType<Result>()
             .Where(result => result.Participant == participant)
             .OrderByDescending(result => result.CompletedAt)
@@ -28,7 +28,17 @@ public sealed class ResultStore(DataPaths paths, ILogger<ResultStore> logger)
     }
 
     /// <summary>The Result with this id, or null if there is none or its file is broken.</summary>
-    public Result? Find(string id) => DataPaths.IsPlainName(id) ? JsonFile.TryRead<Result>(FileOf(id), logger) : null;
+    public Result? Find(string id) => DataPaths.IsPlainName(id) ? ReadResult(FileOf(id)) : null;
+
+    /// <summary>The Result in the file; null if there is none, or it is broken: unreadable, or without its id, Participant or Subject.</summary>
+    private Result? ReadResult(string file)
+    {
+        if (!File.Exists(file)) return null;
+        if (JsonFile.TryRead<Result>(file, logger) is { Id: not "", Participant: not null, Subject: not null } result) return result;
+
+        logger.LogWarning("Result file {File} is broken; it is left out", file);
+        return null;
+    }
 
     private string FileOf(string id) => Path.Combine(paths.ResultsDirectory, $"{id}.json");
 }
