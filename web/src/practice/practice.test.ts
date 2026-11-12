@@ -77,7 +77,7 @@ afterEach(() => {
 })
 
 describe('loading a Practice', () => {
-  it('runs once the Subject and its Questions are loaded', async () => {
+  it('starts once the Subject and its Questions are loaded', async () => {
     const p = open(memoryData().data)
     expect(p.getSnapshot()).toEqual({ phase: 'loading' })
 
@@ -270,6 +270,25 @@ describe('sound', () => {
     expect(calls).toEqual(['speak pear', 'speak pear'])
   })
 
+  it('reads nothing when a word is tapped in a scored Block', async () => {
+    const { audio, calls } = recordingAudio()
+    const pairs = [['apple', 'alma'], ['pear', 'körte'], ['plum', 'szilva'], ['grape', 'szőlő'], ['melon', 'dinnye']]
+    const p = open(
+      memoryData({ questions: pairs.map(([text, meaning]) => ({ type: 'word-matching', text, answer: [meaning], time: 10, speak_text: 'en-GB' })) }).data,
+      audio,
+    )
+    await settle()
+    for (const i of [0, 1, 2, 3, 4]) {
+      p.tap('word', i)
+      p.tap('meaning', i)
+    }
+    calls.length = 0
+
+    p.tap('word', 0)
+
+    expect(calls).toEqual([])
+  })
+
   it('reads a statement again when asked, even once its Block is scored', async () => {
     const { audio, calls } = recordingAudio()
     const p = open(memoryData({ questions: [...spokenStatements, ...statements(3)] }).data, audio)
@@ -332,6 +351,17 @@ describe('auto_advance', () => {
     expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
   })
 
+  it('stays on a scored Block when time runs out before it moves on', async () => {
+    const p = open(memoryData({ subjects: [autoHistory], questions: statements(6) }).data)
+    await settle()
+    await vi.advanceTimersByTimeAsync(59_000)
+    p.close()
+
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(p.getSnapshot()).toMatchObject({ phase: 'running', blockIndex: 0, timedOut: true })
+  })
+
   it('stays on the last Block once there is a Result, even with auto_advance', async () => {
     const p = open(memoryData({ subjects: [autoHistory] }).data)
     await settle()
@@ -344,7 +374,7 @@ describe('auto_advance', () => {
 })
 
 describe('what the snapshot tells', () => {
-  it('runs and saves a Result without Quiz names when the names cannot be fetched', async () => {
+  it('starts and saves a Result without Quiz names when the names cannot be fetched', async () => {
     const { data, saved } = memoryData()
     const p = open({ ...data, fetchQuizzes: () => Promise.reject(new Error('offline')) })
     await settle()

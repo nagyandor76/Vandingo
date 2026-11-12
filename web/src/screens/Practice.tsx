@@ -7,7 +7,7 @@ import {
   createPractice,
   type Block,
   type BlockQuestion,
-  type Practice as RunningPractice,
+  type Practice as PracticeModule,
   type PracticeResult,
   type PracticeSnapshot,
   type SaveStatus,
@@ -25,9 +25,9 @@ const loading: PracticeSnapshot = { phase: 'loading' }
 const noSubscription = () => () => {}
 const loadingSnapshot = () => loading
 
-/** Runs one Practice while the screen shows it; leaving the screen ends it. */
+/** The Practice shown on this screen, from its start until the screen is left. */
 function usePractice(participant: string, subject: string, from: number, to: number, complete: boolean) {
-  const [practice, setPractice] = useState<RunningPractice>()
+  const [practice, setPractice] = useState<PracticeModule>()
   useEffect(() => {
     if (!complete) return
     const started = createPractice({ participant, subject, from, to }, { data, audio })

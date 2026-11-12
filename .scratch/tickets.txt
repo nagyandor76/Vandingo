@@ -1,4 +1,5 @@
-Kész (17)
+Kész (18)
+practice-module 01  done    01: Practice modul – a Practice életciklusa egy helyen
 vandingo-mvp   01  done    01: Alapváz – üres alkalmazás, amely elindul
 vandingo-mvp   02  done    02: A Practice indítóképernyője
 vandingo-mvp   03  done    03: Igaz–hamis Practice az elejétől a Resultig
@@ -17,7 +18,6 @@ vandingo-mvp   15  done    15: Szerkesztő – Quiz feltöltése JSON-ből
 vandingo-mvp   16  done    16: Beállítások – Quizek feltöltése ZIP-ben
 vandingo-mvp   17  done    17: Beállítások – új Quizek átvétele a forrásból
 
-Nyitott (3)
+Nyitott (2)
 architecture-followups 01  ready-for-agent  01: Az `api.ts` adja vissza a foglaló Quizeket a Quiz mentésénél  ← indítható
 architecture-followups 02  ready-for-agent  02: Egy sérült Result-fájl ne vigye el a teljes Result-listát  ← indítható
-practice-module 01  ready-for-agent  01: Practice modul – a Practice életciklusa egy helyen  ← indítható

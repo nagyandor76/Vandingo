@@ -148,7 +148,8 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     const previous = state!
     if (disposed || moved === previous) return
     state = moved
-    if (moved.blockIndex !== previous.blockIndex || moved.finished) clearTimeout(advancing)
+    // A pending move on is dropped once the Participant moved on, or once there is a Result.
+    if (moved.blockIndex !== previous.blockIndex || moved.result) clearTimeout(advancing)
     if (moved.speech && moved.speech !== previous.speech) audio.speak(moved.speech)
     const block = currentBlock(moved)
     const scoredBefore = moved.blockIndex === previous.blockIndex && currentBlock(previous).closed

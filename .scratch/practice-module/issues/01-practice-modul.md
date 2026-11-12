@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: []
 ---
 
@@ -54,23 +54,29 @@ Forrás: architektúra-áttekintés (2026-11-12), 1. jelölt, és az utána köv
 
 ## Tesztek (a Practice modul interface-én)
 
-- [ ] betöltés: ismeretlen Subject → load-failed; fetch-hiba → load-failed
-- [ ] betöltés: nincs kitölthető kérdés → empty
-- [ ] betöltés: a Quiz-nevek hibája után is running, a Result nevek nélkül
-- [ ] idő: lejár → a Block pontozva, timedOut, pontosan egy mentés
-- [ ] idő: a Result után az óra áll
-- [ ] auto_advance: pontozott Block → 2 s múlva a következő
-- [ ] auto_advance: kikapcsolva marad; a Result után marad
-- [ ] hang: pontozott Block → stop és egy Block-hang, egyszer
-- [ ] hang: új legfelső állítás → egy felolvasás
-- [ ] hang: angol szóra koppintva felolvas, magyarra csend
-- [ ] hang: lezárt Blockban az állításra koppintva felolvas, a szóra koppintva nem
-- [ ] hang: dispose és finished → stop
-- [ ] mentés: a Result tartalmazza a Participantet, a Subjectet, a tartományt és a Quiz-neveket
-- [ ] mentés: hiba → failed; retrySave → ugyanaz a Result, saved
-- [ ] mentés: dispose mentés közben → nincs hiba
-- [ ] pillanatkép: progress, correctInBlock, passed
-- [ ] engine: a szópárosítás-tesztek `tap`-sorozatokon át
-- [ ] a `Practice.tsx` nem importálja az engine-t, és nincs benne `useEffect` időzítésre, hangra vagy mentésre
+- [x] betöltés: ismeretlen Subject → load-failed; fetch-hiba → load-failed
+- [x] betöltés: nincs kitölthető kérdés → empty
+- [x] betöltés: a Quiz-nevek hibája után is running, a Result nevek nélkül
+- [x] idő: lejár → a Block pontozva, timedOut, pontosan egy mentés
+- [x] idő: a Result után az óra áll
+- [x] auto_advance: pontozott Block → 2 s múlva a következő
+- [x] auto_advance: kikapcsolva marad; a Result után marad
+- [x] hang: pontozott Block → stop és egy Block-hang, egyszer
+- [x] hang: új legfelső állítás → egy felolvasás
+- [x] hang: angol szóra koppintva felolvas, magyarra csend
+- [x] hang: lezárt Blockban az állításra koppintva felolvas, a szóra koppintva nem
+- [x] hang: dispose és finished → stop
+- [x] mentés: a Result tartalmazza a Participantet, a Subjectet, a tartományt és a Quiz-neveket
+- [x] mentés: hiba → failed; retrySave → ugyanaz a Result, saved
+- [x] mentés: dispose mentés közben → nincs hiba
+- [x] pillanatkép: progress, correctInBlock, passed
+- [x] engine: a szópárosítás-tesztek `tap`-sorozatokon át
+- [x] a `Practice.tsx` nem importálja az engine-t, és nincs benne `useEffect` időzítésre, hangra vagy mentésre
 
 ## Comments
+
+- 2026-11-12: Elkészült a `refactor/practice-module` ágon (`web/src/practice/practice.ts`, 23 modulteszt; engine: `tap`, `readAloud`). Eltérések a döntésektől:
+  - A `running` pillanatkép egy `resultReady` mezőt is kapott. Ebből tudja a képernyő, hogy „Eredmény” vagy „Következő” legyen a gomb felirata.
+  - Az `audio.ts` a figyelőt a modul betöltésekor regisztrálja, nem az első használatkor. Így már a Kezdőképernyőn tett első koppintás feloldja a hangot.
+  - Review-javítás: ha auto_advance mellett a pontozott Blockon jár le az idő, a függő továbblépés törlődik. A mainen ilyenkor a Summary a gomb megnyomása nélkül megjelent.
+  - Böngészőben még nincs kipróbálva.
