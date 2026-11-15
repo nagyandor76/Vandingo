@@ -122,7 +122,13 @@ export default function Practice() {
         {block.type === 'word-matching' ? (
           <WordMatching block={block} selection={snapshot.selection} onTap={practice.tap} />
         ) : block.type === 'spelling' && snapshot.spelling ? (
-          <Spelling key={blockIndex} block={block} spelling={snapshot.spelling} onPlace={practice.place} />
+          <Spelling
+            key={blockIndex}
+            block={block}
+            spelling={snapshot.spelling}
+            onPlace={practice.place}
+            onReadAloud={() => practice.readAloud(0)}
+          />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
@@ -338,9 +344,15 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
 /**
  * A spelling Block: the Hungarian meaning, the answer line with its spaces and punctuation given, and the letter
  * tiles. A tapped tile fills the next empty slot and fades. Once scored, each letter turns green or red, a right
- * one showing the word's own case; a wrong word shows the correct one below.
+ * one showing the word's own case; a wrong word shows the correct one below. A scored word with a reading can be
+ * heard again; before scoring it is never read, as that would give its spelling away.
  */
-function Spelling({ block, spelling, onPlace }: { block: Block; spelling: SpellingView; onPlace: (tile: number) => void }) {
+function Spelling({ block, spelling, onPlace, onReadAloud }: {
+  block: Block
+  spelling: SpellingView
+  onPlace: (tile: number) => void
+  onReadAloud: () => void
+}) {
   return (
     <Stack spacing={2.5} sx={{ alignItems: 'center', pt: 1 }}>
       <Typography variant="h2" component="p" sx={{ textAlign: 'center' }}>
@@ -376,10 +388,19 @@ function Spelling({ block, spelling, onPlace }: { block: Block; spelling: Spelli
           )
         })}
       </Stack>
-      {spelling.correctWord && !block.allCorrect && (
-        <Typography sx={{ fontWeight: 600 }}>
-          Helyesen: <Box component="span" sx={{ color: 'success.main' }}>{spelling.correctWord}</Box>
-        </Typography>
+      {(spelling.hearable || (spelling.correctWord && !block.allCorrect)) && (
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          {spelling.correctWord && !block.allCorrect && (
+            <Typography sx={{ fontWeight: 600 }}>
+              Helyesen: <Box component="span" sx={{ color: 'success.main' }}>{spelling.correctWord}</Box>
+            </Typography>
+          )}
+          {spelling.hearable && (
+            <ButtonBase aria-label="Felolvasás" onClick={onReadAloud} sx={{ width: 44, height: 44, fontSize: 22, borderRadius: 1 }}>
+              🔊
+            </ButtonBase>
+          )}
+        </Stack>
       )}
       <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
         {spelling.tiles.map((tile, i) => (

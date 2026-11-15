@@ -103,7 +103,7 @@ export interface Practice {
   tap(side: Side, index: number): void
   /** Places a tile of the current spelling Block, by its index, in the first empty slot of the word. */
   place(tile: number): void
-  /** Reads a Question of the current Block aloud again, if it has a `speak_text`. */
+  /** Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word only once scored. */
   readAloud(questionIndex: number): void
   /** Closes and scores the current true–false Block. */
   close(): void
@@ -154,6 +154,48 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   let submitted: NewResult | undefined
   let saveStatus: SaveStatus | undefined
 
+  /** The scored spelling Block whose sound is still playing; what is asked to be read waits for it. */
+  let soundOf: number | undefined
+
+  /** The Participant is still on this Block of the Practice and hasn't left. */
+  const stillOn = (blockIndex: number) => !disposed && state?.blockIndex === blockIndex && !state.finished
+
+  /**
+   * With auto_advance, moves on from the scored Block after a while, unless the Participant moves on first.
+   * Once there is a Result, the Participant moves on to the summary by hand.
+   */
+  const advanceLater = (blockIndex: number) => {
+    clearTimeout(advancing)
+    if (!autoAdvance || !stillOn(blockIndex) || state!.result) return
+    advancing = setTimeout(() => update(next(state!)), autoAdvanceMs)
+  }
+
+  /**
+   * Reads a scored spelling word, then moves on only once the latest reading is over, so the move on never cuts
+   * it off; a reading asked for meanwhile restarts the wait.
+   */
+  const readSpelling = (speech: Speech, blockIndex: number) => {
+    clearTimeout(advancing)
+    audio.speak(speech).then(() => {
+      if (state?.speech === speech) advanceLater(blockIndex)
+    })
+  }
+
+  /**
+   * A scored spelling Block: its sound first, then the word if it has a reading (the latest one asked for by the
+   * end of the sound), then the move on.
+   */
+  const soundSpelling = (block: Block, blockIndex: number, speech: Speech | undefined) => {
+    soundOf = blockIndex
+    audio.playBlockSound(block.allCorrect!).then(() => {
+      if (soundOf !== blockIndex) return
+      soundOf = undefined
+      if (!stillOn(blockIndex)) return
+      if (speech && state!.speech) readSpelling(state!.speech, blockIndex)
+    })
+    if (!speech) advanceLater(blockIndex)
+  }
+
   /** Moves the engine on and does what the move asks for: reading aloud, the Block sound, saving a new Result. */
   const update = (moved: PracticeState) => {
     const previous = state!
@@ -161,15 +203,25 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     state = moved
     // A pending move on is dropped once the Participant moved on, or once there is a Result.
     if (moved.blockIndex !== previous.blockIndex || moved.result) clearTimeout(advancing)
-    if (moved.speech && moved.speech !== previous.speech) audio.speak(moved.speech)
+    if (moved.blockIndex !== previous.blockIndex) soundOf = undefined
+    const newSpeech = moved.speech && moved.speech !== previous.speech ? moved.speech : undefined
     const block = currentBlock(moved)
     const scoredBefore = moved.blockIndex === previous.blockIndex && currentBlock(previous).closed
-    if (block.closed && !scoredBefore) {
-      // One sound per scored Block, cutting off any reading.
-      audio.stop()
-      audio.playBlockSound(block.allCorrect!)
-      // Once there is a Result, the Participant moves on to the summary by hand.
-      if (autoAdvance && !moved.result) advancing = setTimeout(() => update(next(state!)), autoAdvanceMs)
+    const scoredNow = block.closed && !scoredBefore
+    if (block.type === 'spelling') {
+      // A spelling word is only read once scored, after the Block sound.
+      if (scoredNow) {
+        audio.stop()
+        soundSpelling(block, moved.blockIndex, newSpeech)
+      } else if (newSpeech && soundOf !== moved.blockIndex) readSpelling(newSpeech, moved.blockIndex)
+    } else {
+      if (newSpeech) audio.speak(newSpeech)
+      if (scoredNow) {
+        // One sound per scored Block, cutting off any reading.
+        audio.stop()
+        audio.playBlockSound(block.allCorrect!)
+        advanceLater(moved.blockIndex)
+      }
     }
     if (moved.finished && !previous.finished) audio.stop()
     if (moved.result && !previous.result) {

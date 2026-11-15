@@ -90,6 +90,8 @@ export interface SpellingView {
   tiles: { letter: string; used: boolean }[]
   /** Set once the Block is scored: the word as it is written. */
   correctWord?: string
+  /** The word can be heard on request: it is scored and has a reading. */
+  hearable: boolean
 }
 
 /** How many random letters are dealt among the tiles besides the word's own. */
@@ -121,6 +123,7 @@ export function spellingView(block: Block): SpellingView {
     slots,
     tiles: tiles.map((letter, i) => ({ letter, used: used.has(i) })),
     ...(block.closed && { correctWord: question.text }),
+    hearable: block.closed && speechOf(question) !== undefined,
   }
 }
 
@@ -210,10 +213,14 @@ function announce(state: PracticeState): PracticeState {
 
 /**
  * Reads a Question of the current Block aloud on request, even once the Block is scored; without a
- * `speak_text` nothing is read. Each request is a new speech, so the same text can be heard again.
+ * `speak_text` nothing is read, and a spelling word only once it is scored. Each request is a new speech,
+ * so the same text can be heard again.
  */
 export function readAloud(state: PracticeState, questionIndex: number): PracticeState {
-  const speech = speechOf(currentBlock(state).questions[questionIndex].question)
+  const block = currentBlock(state)
+  // Hearing a spelling word would give its spelling away.
+  if (block.type === 'spelling' && !block.closed) return state
+  const speech = speechOf(block.questions[questionIndex].question)
   return speech ? { ...state, speech } : state
 }
 
@@ -310,7 +317,10 @@ function scoreCurrentBlock(state: PracticeState): PracticeState {
   }
   const questions = block.questions.map((entry, i) => ({ ...entry, correct: correctOf(entry, i) }))
   const allCorrect = questions.every((entry) => entry.correct)
-  return { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
+  const scored = { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
+  // A spelling word is heard once it is scored, whether right or wrong, so the Participant learns how it is said.
+  const speech = block.type === 'spelling' ? speechOf(block.questions[0].question) : undefined
+  return speech ? { ...scored, speech } : scored
 }
 
 /** Moves on from a closed Block to the next one, or to the summary once the Practice has its Result. */

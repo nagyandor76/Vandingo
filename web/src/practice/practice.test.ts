@@ -38,18 +38,32 @@ function memoryData({
   return { data, saved }
 }
 
-/** Records what the Practice asked the audio port to do, in order; every reading and sound is over at once. */
+/**
+ * Records what the Practice asked the audio port to do, in order. A reading or a sound goes on until the test
+ * ends it: `endSound` and `endReading` end the oldest one still going, and let what follows it happen.
+ */
 function recordingAudio() {
   const calls: string[] = []
+  const sounds: (() => void)[] = []
+  const readings: (() => void)[] = []
+  const goOnIn = (queue: (() => void)[]) => new Promise<void>((resolve) => queue.push(resolve))
+  const endOldestIn = async (queue: (() => void)[]) => {
+    queue.shift()?.()
+    await settle()
+  }
   return {
     calls,
+    endSound: () => endOldestIn(sounds),
+    endReading: () => endOldestIn(readings),
     audio: {
-      speak: async ({ text }: { text: string }) => {
+      speak: ({ text }: { text: string }) => {
         calls.push(`speak ${text}`)
+        return goOnIn(readings)
       },
       stop: () => calls.push('stop'),
-      playBlockSound: async (allCorrect: boolean) => {
+      playBlockSound: (allCorrect: boolean) => {
         calls.push(`sound ${allCorrect ? 'correct' : 'wrong'}`)
+        return goOnIn(sounds)
       },
     },
   }
@@ -293,6 +307,27 @@ describe('sound', () => {
     expect(calls).toEqual([])
   })
 
+  it('cuts off the English word of the last pair with the Block sound, and reads nothing after it', async () => {
+    const { audio, calls, endSound } = recordingAudio()
+    const pairs = [['apple', 'alma'], ['pear', 'körte'], ['plum', 'szilva'], ['grape', 'szőlő'], ['melon', 'dinnye']]
+    const p = open(
+      memoryData({ questions: pairs.map(([text, meaning]) => ({ type: 'word-matching', text, answer: [meaning], time: 10, speak_text: 'en-GB' })) }).data,
+      audio,
+    )
+    await settle()
+    for (const i of [0, 1, 2, 3]) {
+      p.tap('meaning', i)
+      p.tap('word', i)
+    }
+    p.tap('meaning', 4)
+    calls.length = 0
+
+    p.tap('word', 4)
+    await endSound()
+
+    expect(calls).toEqual(['speak melon', 'stop', 'sound correct'])
+  })
+
   it('reads a statement again when asked, even once its Block is scored', async () => {
     const { audio, calls } = recordingAudio()
     const p = open(memoryData({ questions: [...spokenStatements, ...statements(3)] }).data, audio)
@@ -419,7 +454,13 @@ describe('what the snapshot tells', () => {
 })
 
 describe('a spelling Block', () => {
-  const spelling = (text: string, meaning: string): PracticeQuestion => ({ type: 'spelling', text, answer: [meaning], time: 20 })
+  const spelling = (text: string, meaning: string, speak_text?: string): PracticeQuestion => ({
+    type: 'spelling',
+    text,
+    answer: [meaning],
+    time: 20,
+    ...(speak_text && { speak_text }),
+  })
 
   /** The running snapshot's spelling Block, as the Participant sees it. */
   const spellingOf = (p: Practice) => {
@@ -577,5 +618,144 @@ describe('a spelling Block', () => {
       p.next()
     }
     expect(types.sort()).toEqual(['spelling', 'spelling', 'true-false'])
+  })
+
+  describe('reading aloud', () => {
+    it('reads the word only after the Block sound, for a right word and for a wrong one', async () => {
+      const { audio, calls, endSound } = recordingAudio()
+      const p = open(memoryData({ questions: [spelling('Hit', 'üt', 'en-GB'), spelling('hat', 'kalap', 'en-GB')] }).data, audio)
+      await settle()
+
+      spell(p, 'hit')
+      expect(calls).toEqual(['stop', 'sound correct'])
+      await endSound()
+      expect(calls).toEqual(['stop', 'sound correct', 'speak Hit'])
+
+      p.next()
+      calls.length = 0
+      spell(p, 'hta')
+      await endSound()
+      expect(calls).toEqual(['stop', 'sound wrong', 'speak hat'])
+    })
+
+    it('reads nothing before the word is scored, not even when asked, and again on request once it is', async () => {
+      const { audio, calls, endSound, endReading } = recordingAudio()
+      const p = open(memoryData({ questions: [spelling('hit', 'üt', 'en-GB')] }).data, audio)
+      await settle()
+
+      p.readAloud(0)
+      spell(p, 'hi')
+      expect(calls).toEqual([])
+      expect(spellingOf(p).hearable).toBe(false)
+
+      spell(p, 't')
+      await endSound()
+      await endReading()
+      p.readAloud(0)
+
+      expect(calls).toEqual(['stop', 'sound correct', 'speak hit', 'speak hit'])
+      expect(spellingOf(p).hearable).toBe(true)
+    })
+
+    it('only plays the Block sound for a word without a reading', async () => {
+      const { audio, calls, endSound } = recordingAudio()
+      const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data, audio)
+      await settle()
+
+      spell(p, 'hit')
+      await endSound()
+      p.readAloud(0)
+
+      expect(calls).toEqual(['stop', 'sound correct'])
+      expect(spellingOf(p).hearable).toBe(false)
+    })
+
+    it('reads nothing late once the Participant has moved on or left', async () => {
+      const { audio, calls, endSound } = recordingAudio()
+      const words = [spelling('hit', 'üt', 'en-GB'), spelling('hat', 'kalap', 'en-GB')]
+      const p = open(memoryData({ questions: words }).data, audio)
+      await settle()
+      spell(p, 'hit')
+      p.next()
+      await endSound()
+      p.dispose()
+
+      const left = open(memoryData({ questions: words }).data, audio)
+      await settle()
+      spell(left, 'hit')
+      left.dispose()
+      await endSound()
+
+      expect(calls.filter((call) => call.startsWith('speak'))).toEqual([])
+    })
+
+    it('with auto_advance, moves on 2 seconds after the reading ends, or after scoring without a reading', async () => {
+      const { audio, endSound, endReading } = recordingAudio()
+      const words = [spelling('hit', 'üt', 'en-GB'), spelling('hat', 'kalap'), spelling('hot', 'forró')]
+      const p = open(memoryData({ subjects: [{ ...history, auto_advance: true }], questions: words }).data, audio)
+      await settle()
+
+      spell(p, 'hit')
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
+      await endSound()
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
+      await endReading()
+      await vi.advanceTimersByTimeAsync(1900)
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
+      await vi.advanceTimersByTimeAsync(100)
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 1 })
+
+      spell(p, 'hat')
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 2 })
+    })
+
+    it('reads a word asked for during the Block sound only after the sound, once', async () => {
+      const { audio, calls, endSound } = recordingAudio()
+      const p = open(memoryData({ questions: [spelling('hit', 'üt', 'en-GB')] }).data, audio)
+      await settle()
+      spell(p, 'hit')
+
+      p.readAloud(0)
+      expect(calls).toEqual(['stop', 'sound correct'])
+      await endSound()
+
+      expect(calls).toEqual(['stop', 'sound correct', 'speak hit'])
+    })
+
+    it('with auto_advance, waits 2 seconds after the end of a reading asked for again', async () => {
+      const { audio, endSound, endReading } = recordingAudio()
+      const words = [spelling('hit', 'üt', 'en-GB'), spelling('hat', 'kalap')]
+      const p = open(memoryData({ subjects: [{ ...history, auto_advance: true }], questions: words }).data, audio)
+      await settle()
+      spell(p, 'hit')
+      await endSound()
+
+      p.readAloud(0)
+      await endReading() // the first reading, cut off by the second
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
+      await endReading()
+      await vi.advanceTimersByTimeAsync(2000)
+
+      expect(p.getSnapshot()).toMatchObject({ blockIndex: 1 })
+    })
+
+    it('with auto_advance, stays on the scored word when time runs out during its sound or reading', async () => {
+      const { audio, endSound, endReading } = recordingAudio()
+      const words = [{ ...spelling('hit', 'üt', 'en-GB'), time: 2 }, { ...spelling('hat', 'kalap'), time: 1 }]
+      const p = open(memoryData({ subjects: [{ ...history, auto_advance: true }], questions: words }).data, audio)
+      await settle()
+      spell(p, 'hit')
+
+      await vi.advanceTimersByTimeAsync(4000)
+      await endSound()
+      await endReading()
+      await vi.advanceTimersByTimeAsync(4000)
+
+      expect(p.getSnapshot()).toMatchObject({ phase: 'running', blockIndex: 0, resultReady: true })
+    })
   })
 })
