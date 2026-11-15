@@ -485,28 +485,12 @@ const lettersRight = (entry: BlockQuestion, tiles: string[]) =>
   })
 
 /**
- * The tiles of a spelling word: one per letter and the extra random letters, shuffled so that reading them left to
- * right never spells the word, not even skipping tiles. If a few draws all spell it, the tiles go in alphabetical
- * order, or the reverse: a word of two or more different letters can't read both ways. A word of one letter, or one
- * letter repeated, spells itself in any order and is dealt as drawn.
+ * The tiles of a spelling word: one per letter and the extra random letters, in alphabetical order, so the same
+ * letters stand side by side.
  */
 function dealTiles(text: string, random: () => number): string[] {
-  const letters = spelledLetters(text)
   const extras = Array.from({ length: extraTiles }, () => String.fromCharCode('a'.charCodeAt(0) + Math.floor(random() * 26)))
-  let tiles = [...letters, ...extras]
-  for (let draw = 0; draw < 5; draw++) {
-    tiles = shuffle(tiles, random)
-    if (!spellsInOrder(tiles, letters)) return tiles
-  }
-  const alphabetical = tiles.toSorted()
-  return [alphabetical, alphabetical.toReversed()].find((order) => !spellsInOrder(order, letters)) ?? tiles
-}
-
-/** Reading the tiles left to right, skipping any of them, gives the word's letters. */
-function spellsInOrder(tiles: string[], letters: string[]): boolean {
-  let next = 0
-  for (const tile of tiles) if (tile === letters[next]) next++
-  return next === letters.length
+  return [...spelledLetters(text), ...extras].sort()
 }
 
 /** Shuffles the indices so that the order always differs from the original one, rotating it if the draw left it in place. */

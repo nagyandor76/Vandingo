@@ -496,25 +496,13 @@ describe('a spelling Block', () => {
     expect(extras).toHaveLength(2)
   })
 
-  it('never deals the tiles so that they spell the word in order', async () => {
-    // Reading the tiles left to right, skipping any of them, must not give the word.
-    const spellsInOrder = (tiles: string[], word: string) => {
-      let next = 0
-      for (const letter of tiles) if (letter === word[next]) next++
-      return next === word.length
-    }
-    // `inOrder` shuffles nothing, so a plain deal would leave the word's letters in place.
-    const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data)
+  it('deals the tiles in alphabetical order, the same letters side by side', async () => {
+    // Extra letters `b` and `s` for `stuff`, then draws that would mix the tiles up if they were shuffled.
+    const draws = [0.05, 0.7]
+    const p = open(memoryData({ questions: [spelling('Stuff', 'cucc')] }).data, undefined, () => draws.shift() ?? 0.3)
     await settle()
 
-    expect(spellsInOrder(letters(spellingOf(p).tiles), 'hit')).toBe(false)
-
-    // Extra letters `a` and `b` for `ab`, then no shuffling at all: every draw and every rotation spells it.
-    const draws = [0, 0.05]
-    const ab = open(memoryData({ questions: [spelling('ab', 'ab')] }).data, undefined, () => draws.shift() ?? inOrder())
-    await settle()
-
-    expect(spellsInOrder(letters(spellingOf(ab).tiles), 'ab')).toBe(false)
+    expect(letters(spellingOf(p).tiles)).toEqual(['b', 'f', 'f', 's', 's', 't', 'u'])
   })
 
   it('keeps the correct word out of the snapshot until the word is scored', async () => {
