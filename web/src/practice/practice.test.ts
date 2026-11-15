@@ -497,12 +497,33 @@ describe('a spelling Block', () => {
   })
 
   it('deals the tiles in alphabetical order, the same letters side by side', async () => {
-    // Extra letters `b` and `s` for `stuff`, then draws that would mix the tiles up if they were shuffled.
+    // Extra letters `g` (among the word's letters) and `s` for `stuff`, then draws that would mix the tiles up if
+    // they were shuffled.
     const draws = [0.05, 0.7]
     const p = open(memoryData({ questions: [spelling('Stuff', 'cucc')] }).data, undefined, () => draws.shift() ?? 0.3)
     await settle()
 
-    expect(letters(spellingOf(p).tiles)).toEqual(['b', 'f', 'f', 's', 's', 't', 'u'])
+    expect(letters(spellingOf(p).tiles)).toEqual(['f', 'f', 'g', 's', 's', 't', 'u'])
+  })
+
+  it('puts at least one extra letter among the letters of the word, so the tiles never show it in one piece', async () => {
+    // Whatever the draws, `hit` gets an extra letter after `h` and before `t`: `h i j t x`, never `a h i t x`.
+    for (const draw of [0, 0.5, 0.999999]) {
+      const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data, undefined, () => draw)
+      await settle()
+
+      const extras = [...letters(spellingOf(p).tiles)]
+      for (const letter of 'hit') extras.splice(extras.indexOf(letter), 1)
+      expect(extras.some((letter) => letter > 'h' && letter < 't')).toBe(true)
+      p.dispose()
+    }
+  })
+
+  it('deals two extra letters even for a word with no letter between its first and last', async () => {
+    const p = open(memoryData({ questions: [spelling('ab', 'ab')] }).data)
+    await settle()
+
+    expect(spellingOf(p).tiles).toHaveLength(4)
   })
 
   it('keeps the correct word out of the snapshot until the word is scored', async () => {

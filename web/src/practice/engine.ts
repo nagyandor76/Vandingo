@@ -486,11 +486,20 @@ const lettersRight = (entry: BlockQuestion, tiles: string[]) =>
 
 /**
  * The tiles of a spelling word: one per letter and the extra random letters, in alphabetical order, so the same
- * letters stand side by side.
+ * letters stand side by side. The first extra letter falls among the word's own (after its alphabetically first
+ * letter, before its last), so the tiles never show the word in one piece; the others may be any letter. A word with
+ * no letter between its first and last (`a`, `ab`) gets any extra letters.
  */
 function dealTiles(text: string, random: () => number): string[] {
-  const extras = Array.from({ length: extraTiles }, () => String.fromCharCode('a'.charCodeAt(0) + Math.floor(random() * 26)))
-  return [...spelledLetters(text), ...extras].sort()
+  const letters = spelledLetters(text)
+  const codes = letters.map((letter) => letter.charCodeAt(0))
+  const [first, last] = [Math.min(...codes), Math.max(...codes)]
+  const letterFrom = (from: number, to: number) => String.fromCharCode(from + Math.floor(random() * (to - from + 1)))
+  const anyLetter = () => letterFrom('a'.charCodeAt(0), 'z'.charCodeAt(0))
+  const extras = Array.from({ length: extraTiles }, (_, i) =>
+    i === 0 && last - first > 1 ? letterFrom(first + 1, last - 1) : anyLetter(),
+  )
+  return [...letters, ...extras].sort()
 }
 
 /** Shuffles the indices so that the order always differs from the original one, rotating it if the draw left it in place. */
