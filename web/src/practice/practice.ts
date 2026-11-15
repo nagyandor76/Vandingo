@@ -13,6 +13,8 @@ import {
   readAloud,
   spellingView,
   startPractice,
+  takeBack,
+  takeBackLast,
   tap,
   tick,
   type Block,
@@ -103,6 +105,10 @@ export interface Practice {
   tap(side: Side, index: number): void
   /** Places a tile of the current spelling Block, by its index, in the first empty slot of the word. */
   place(tile: number): void
+  /** Takes the last placed letter of the current spelling Block back to its tile. */
+  takeBackLast(): void
+  /** Takes back the letter at a place of the spelling Block's answer line, counting given characters too. */
+  takeBack(place: number): void
   /** Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word only once scored. */
   readAloud(questionIndex: number): void
   /** Closes and scores the current true–false Block. */
@@ -271,6 +277,8 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     answer: (questionIndex, value) => state && update(answer(state, questionIndex, value)),
     tap: (side, index) => state && update(tap(state, side, index)),
     place: (tile) => state && update(place(state, tile)),
+    takeBackLast: () => state && update(takeBackLast(state)),
+    takeBack: (place) => state && update(takeBack(state, place)),
     readAloud: (questionIndex) => state && update(readAloud(state, questionIndex)),
     close: () => state && update(closeBlock(state)),
     next: () => state && update(next(state)),

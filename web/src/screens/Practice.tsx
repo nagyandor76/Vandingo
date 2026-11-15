@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router'
 import { Alert, alpha, Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography, useTheme } from '@mui/material'
 import { fetchQuestions, fetchQuizzes, fetchSubjects, saveResult } from '../api.ts'
@@ -127,6 +127,7 @@ export default function Practice() {
             block={block}
             spelling={snapshot.spelling}
             onPlace={practice.place}
+            onTakeBack={practice.takeBack}
             onReadAloud={() => practice.readAloud(0)}
           />
         ) : (
@@ -167,9 +168,16 @@ export default function Practice() {
             </Button>
           ) : hints[block.type] ? (
             // These Blocks are scored by themselves: once every word is paired, or the word is spelled.
-            <Typography color="text.secondary" sx={{ flex: 1, minHeight: 48, display: 'flex', alignItems: 'center' }}>
-              {hints[block.type]}
-            </Typography>
+            <>
+              <Typography color="text.secondary" sx={{ flex: 1, minHeight: 48, display: 'flex', alignItems: 'center' }}>
+                {hints[block.type]}
+              </Typography>
+              {block.type === 'spelling' && (
+                <Button variant="outlined" aria-label="Utolsó betű vissza" sx={{ minWidth: 64, fontSize: 20 }} onClick={practice.takeBackLast}>
+                  ⌫
+                </Button>
+              )}
+            </>
           ) : (
             <Button variant="contained" fullWidth onClick={practice.close}>
               Kész
@@ -343,50 +351,72 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
 
 /**
  * A spelling Block: the Hungarian meaning, the answer line with its spaces and punctuation given, and the letter
- * tiles. A tapped tile fills the next empty slot and fades. Once scored, each letter turns green or red, a right
- * one showing the word's own case; a wrong word shows the correct one below. A scored word with a reading can be
- * heard again; before scoring it is never read, as that would give its spelling away.
+ * tiles. A tapped tile fills the next empty slot and fades; a tapped letter in the answer line goes back. Once
+ * scored, each letter turns green or red, a right one showing the word's own case; a wrong word shows the correct
+ * one below. A scored word with a reading can be heard again; before scoring it is never read, as that would give
+ * its spelling away.
  */
-function Spelling({ block, spelling, onPlace, onReadAloud }: {
+function Spelling({ block, spelling, onPlace, onTakeBack, onReadAloud }: {
   block: Block
   spelling: SpellingView
   onPlace: (tile: number) => void
+  onTakeBack: (place: number) => void
   onReadAloud: () => void
 }) {
+  const answerLine = useRef<HTMLDivElement>(null)
+  const width = useWidth(answerLine)
+  const words = wordsOf(spelling.slots)
+  // The longest word must fit on one line, so the slots shrink for it.
+  const longest = Math.max(...words.map((word) => word.length))
+  const slotWidth = fitSize(width, longest, slotGap, maxSlotWidth)
+  const fontSize = Math.round(slotWidth * 0.8)
   return (
     <Stack spacing={2.5} sx={{ alignItems: 'center', pt: 1 }}>
       <Typography variant="h2" component="p" sx={{ textAlign: 'center' }}>
         {spelling.meaning}
       </Typography>
-      <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 0.5, rowGap: 1 }} aria-label="Válasz">
-        {spelling.slots.map((slot, i) => {
-          if ('given' in slot) {
-            return (
-              <Box key={i} sx={{ minWidth: slot.given === ' ' ? 12 : 'auto', display: 'grid', placeItems: 'end center', fontSize: 22, fontWeight: 600 }}>
-                {slot.given}
-              </Box>
-            )
-          }
-          const tone = slot.correct === undefined ? undefined : slot.correct ? 'success.main' : 'error.main'
-          return (
-            <Box
-              key={i}
-              sx={{
-                width: 28,
-                height: 36,
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: 22,
-                fontWeight: 700,
-                borderBottom: 2,
-                borderColor: tone ?? 'text.secondary',
-                color: tone ?? 'text.primary',
-              }}
-            >
-              {slot.letter}
-            </Box>
-          )
-        })}
+      <Stack
+        ref={answerLine}
+        direction="row"
+        sx={{ width: '100%', flexWrap: 'wrap', justifyContent: 'center', columnGap: 2, rowGap: 1 }}
+        aria-label="Válasz"
+      >
+        {width > 0 && words.map((word) => (
+          // A line breaks only between words, never inside one.
+          <Stack key={word[0].place} direction="row" sx={{ gap: `${slotGap}px` }}>
+            {word.map(({ slot, place }) => {
+              if ('given' in slot) {
+                return (
+                  <Box key={place} sx={{ display: 'grid', placeItems: 'end center', fontSize, fontWeight: 600 }}>
+                    {slot.given}
+                  </Box>
+                )
+              }
+              const tone = slot.correct === undefined ? undefined : slot.correct ? 'success.main' : 'error.main'
+              return (
+                <ButtonBase
+                  key={place}
+                  onClick={() => onTakeBack(place)}
+                  disabled={block.closed || slot.letter === undefined}
+                  aria-label={slot.letter ? `${slot.letter} vissza` : 'üres hely'}
+                  sx={{
+                    width: slotWidth,
+                    height: Math.round(slotWidth * 1.3),
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize,
+                    fontWeight: 700,
+                    borderBottom: 2,
+                    borderColor: tone ?? 'text.secondary',
+                    color: tone ?? 'text.primary',
+                  }}
+                >
+                  {slot.letter}
+                </ButtonBase>
+              )
+            })}
+          </Stack>
+        ))}
       </Stack>
       {(spelling.hearable || (spelling.correctWord && !block.allCorrect)) && (
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -402,33 +432,101 @@ function Spelling({ block, spelling, onPlace, onReadAloud }: {
           )}
         </Stack>
       )}
-      <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
-        {spelling.tiles.map((tile, i) => (
+      <LetterTiles tiles={spelling.tiles} closed={block.closed} onPlace={onPlace} />
+    </Stack>
+  )
+}
+
+/** The widest a letter slot of the answer line grows, and the gap between slots of a word. */
+const maxSlotWidth = 28
+const slotGap = 4
+
+/** The answer line split into words at its spaces, each slot with its place in the whole line. */
+function wordsOf(slots: SpellingView['slots']) {
+  const words: { slot: SpellingView['slots'][number]; place: number }[][] = [[]]
+  slots.forEach((slot, place) => {
+    if ('given' in slot && slot.given === ' ') words.push([])
+    else words.at(-1)!.push({ slot, place })
+  })
+  return words.filter((word) => word.length > 0)
+}
+
+/** The widest a letter tile grows, and the gap between tiles. */
+const maxTileSize = 64
+const tileGap = 6
+/** The fewest rows that still leave tiles this big are used; if none does, the most rows, for the biggest tiles. */
+const largeTileSize = 56
+const maxTileRows = 3
+
+/** How big each of `count` items in a row can be to fill the width with gaps between them, up to a limit. */
+const fitSize = (width: number, count: number, gap: number, max: number) =>
+  Math.min(max, Math.floor((width - (count - 1) * gap) / count))
+
+/**
+ * The letter tiles of a spelling Block, filling the width: in as few rows as keep them large, at most three, and as
+ * big as the width allows up to a limit, so a short word gets large tiles in one row.
+ */
+function LetterTiles({ tiles, closed, onPlace }: {
+  tiles: SpellingView['tiles']
+  closed: boolean
+  onPlace: (tile: number) => void
+}) {
+  const grid = useRef<HTMLDivElement>(null)
+  const width = useWidth(grid)
+  const columnsIn = (rows: number) => Math.ceil(tiles.length / rows)
+  const fewerRows = Array.from({ length: maxTileRows - 1 }, (_, i) => i + 1)
+  const rows = fewerRows.find((r) => fitSize(width, columnsIn(r), tileGap, maxTileSize) >= largeTileSize) ?? maxTileRows
+  const columns = columnsIn(rows)
+  const size = fitSize(width, columns, tileGap, maxTileSize)
+
+  return (
+    <Box
+      ref={grid}
+      sx={{ width: '100%', display: 'grid', justifyContent: 'center', gap: `${tileGap}px`, gridTemplateColumns: `repeat(${columns}, ${size}px)` }}
+    >
+      {width > 0 &&
+        tiles.map((tile, i) => (
           <ButtonBase
             key={i}
             onClick={() => onPlace(i)}
-            disabled={tile.used || block.closed}
+            disabled={tile.used || closed}
             aria-label={tile.letter}
             sx={{
-              width: 48,
-              height: 48,
+              width: size,
+              height: size,
               borderRadius: 1,
               border: 1.5,
               borderColor: 'divider',
               bgcolor: 'background.paper',
               boxShadow: '0 1px 2px rgba(16,24,40,0.06)',
-              fontSize: 22,
+              fontSize: Math.round(size * 0.45),
               fontWeight: 700,
-              opacity: tile.used ? 0.3 : 1,
+              opacity: tile.used || closed ? 0.3 : 1,
               transition: 'opacity 120ms',
             }}
           >
             {tile.letter}
           </ButtonBase>
         ))}
-      </Stack>
-    </Stack>
+    </Box>
   )
+}
+
+/**
+ * The element's content width in pixels, kept up to date as it resizes; measured before the first paint, so what
+ * depends on it never flashes empty.
+ */
+function useWidth(ref: RefObject<HTMLElement | null>) {
+  const [width, setWidth] = useState(0)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    setWidth(element.clientWidth)
+    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref])
+  return width
 }
 
 function Summary({ result, passed, saveStatus, onRetry }: {

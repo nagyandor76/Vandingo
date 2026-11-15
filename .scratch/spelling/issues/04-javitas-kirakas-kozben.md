@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [3]
 ---
 
@@ -11,10 +11,14 @@ Forrás: [spec](../spec.md), „A válasz kirakása”.
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] ⌫: az utoljára lerakott betű visszakerül, a gombja újra használható
-- [ ] Lerakott betűre koppintás: az a betű visszakerül, a helye üres marad
-- [ ] A következő lerakás az első üres helyet tölti ki
-- [ ] Kiértékelt Blockban a ⌫ és a visszavétel nem hat
-- [ ] Tesztek a Practice modulon
+- [x] ⌫: az utoljára lerakott betű visszakerül, a gombja újra használható
+- [x] Lerakott betűre koppintás: az a betű visszakerül, a helye üres marad
+- [x] A következő lerakás az első üres helyet tölti ki
+- [x] Kiértékelt Blockban a ⌫ és a visszavétel nem hat
+- [x] Tesztek a Practice modulon
+
+## Comments
+
+- 2026-11-15: Elkészült. Engine: `takeBackLast` (a lerakás sorrendjét a `placingOrder` őrzi, így az időrendben utolsót veszi vissza) és `takeBack(place)` (a válaszsor helye, az előre kiírt karaktereket is beleszámolva). Képernyő: a válaszsor lerakott betűi koppinthatók, a ⌫ az alsó sávban, a tipp mellett. Hosszú, egyszavas kifejezésnél (pl. 20 betű 360 px-en) a válaszsor helyei kb. 13 px-esre zsugorodnak, ott a koppintás nehéz; a ⌫ ilyenkor is működik.

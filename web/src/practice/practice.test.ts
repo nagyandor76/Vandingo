@@ -588,6 +588,54 @@ describe('a spelling Block', () => {
     expect(calls).toEqual(['stop', 'sound wrong'])
   })
 
+  describe('fixing a word while spelling it', () => {
+    /** The letters on the used tiles, in alphabetical order. */
+    const used = (p: Practice) => letters(spellingOf(p).tiles.filter((tile) => tile.used)).sort()
+
+    it('takes back the last placed letter, its tile ready to be placed again', async () => {
+      const p = open(memoryData({ questions: [spelling('a hit', 'egy ütés')] }).data)
+      await settle()
+      spell(p, 'ah')
+
+      p.takeBackLast()
+
+      expect(spellingOf(p).slots).toEqual([{ letter: 'a' }, { given: ' ' }, { letter: undefined }, { letter: undefined }, { letter: undefined }])
+      expect(used(p)).toEqual(['a'])
+      spell(p, 'h')
+      expect(used(p)).toEqual(['a', 'h'])
+    })
+
+    it('takes back a letter tapped in the answer line; the next tile fills the first empty slot', async () => {
+      const p = open(memoryData({ questions: [spelling('a hit', 'egy ütés')] }).data)
+      await settle()
+      spell(p, 'ahi')
+
+      p.takeBack(2) // the `h`: places in the answer line count the given space too
+
+      expect(spellingOf(p).slots).toEqual([{ letter: 'a' }, { given: ' ' }, { letter: undefined }, { letter: 'i' }, { letter: undefined }])
+      expect(used(p)).toEqual(['a', 'i'])
+      spell(p, 'h')
+      p.takeBackLast()
+      expect(spellingOf(p).slots).toEqual([{ letter: 'a' }, { given: ' ' }, { letter: undefined }, { letter: 'i' }, { letter: undefined }])
+    })
+
+    it('ignores taking back in a scored Block, on a given character or on an empty slot', async () => {
+      const p = open(memoryData({ questions: [spelling('a hit', 'egy ütés'), spelling('hat', 'kalap')] }).data)
+      await settle()
+      spell(p, 'a')
+      p.takeBack(1)
+      p.takeBack(2)
+      expect(used(p)).toEqual(['a'])
+
+      spell(p, 'hit')
+      p.takeBackLast()
+      p.takeBack(0)
+
+      expect(p.getSnapshot()).toMatchObject({ block: { closed: true, allCorrect: true } })
+      expect(used(p)).toEqual(['a', 'h', 'i', 't'])
+    })
+  })
+
   it('counts a half-spelled word as wrong when time runs out', async () => {
     const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data)
     await settle()

@@ -54,6 +54,8 @@ export interface BlockQuestion {
   announced?: boolean
   /** Spelling: for each letter of the word in turn, the index of the tile placed there, if any. */
   placed?: (number | undefined)[]
+  /** Spelling: the letters (by their place in the word) holding a tile, in the order the tiles were placed. */
+  placingOrder?: number[]
 }
 
 /** Same-type Questions shown and scored together. */
@@ -430,8 +432,43 @@ export function place(state: PracticeState, tile: number): PracticeState {
   const slot = placed.indexOf(undefined)
   const onScreen = Number.isInteger(tile) && tile >= 0 && tile < block.tiles!.length
   if (slot < 0 || !onScreen || placed.includes(tile)) return state
-  const questions = [{ ...entry, placed: placed.with(slot, tile) }]
+  const questions = [{ ...entry, placed: placed.with(slot, tile), placingOrder: [...(entry.placingOrder ?? []), slot] }]
   return closeBlock(withCurrentBlock(state, { ...block, questions }))
+}
+
+/** Takes the last placed letter of the current spelling Block back to its tile; a scored Block ignores it. */
+export function takeBackLast(state: PracticeState): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'spelling') return state
+  const last = block.questions[0].placingOrder?.at(-1)
+  return last === undefined ? state : takeBackLetter(state, last)
+}
+
+/**
+ * Takes back the letter placed at a place in the answer line of the current spelling Block, counting given
+ * characters too; an empty or given place and a scored Block ignore it.
+ */
+export function takeBack(state: PracticeState, place: number): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'spelling') return state
+  const characters = [...block.questions[0].question.text]
+  if (!isSpelled(characters[place] ?? '')) return state
+  const letter = characters.slice(0, place).filter(isSpelled).length
+  return block.questions[0].placed?.[letter] === undefined ? state : takeBackLetter(state, letter)
+}
+
+/** Takes back the tile on one letter of the spelling word, given by the letter's place in the word. */
+function takeBackLetter(state: PracticeState, letter: number): PracticeState {
+  const block = currentBlock(state)
+  const [entry] = block.questions
+  const questions = [
+    {
+      ...entry,
+      placed: entry.placed!.with(letter, undefined),
+      placingOrder: entry.placingOrder!.filter((placedLetter) => placedLetter !== letter),
+    },
+  ]
+  return withCurrentBlock(state, { ...block, questions })
 }
 
 /** Every letter slot of the spelling word holds a tile; `placed` has one entry per letter once a tile is placed. */
