@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Vandingo.Api.Validation;
 
 namespace Vandingo.Api.Quizzes;
@@ -9,15 +11,20 @@ internal static class QuizRules
     public const int MinDifficulty = 1;
     public const int MaxDifficulty = 20;
 
+    /// <summary>How many letter tiles fit on a phone screen (three rows), and how many of them are random extras.</summary>
+    private const int MaxSpellingTiles = 24;
+    private const int ExtraSpellingTiles = 2;
+    public const int MaxSpellingLetters = MaxSpellingTiles - ExtraSpellingTiles;
+
     /// <summary>Every question type, each with the check of the fields it uses.</summary>
     private static readonly Dictionary<string, Func<Question, (string Field, string Message)?>> TypeRules = new()
     {
         ["true-false"] = question => question.Answer is ["true"] or ["false"]
             ? null
             : ("answer", "A válasz Igaz vagy Hamis lehet."),
-        ["word-matching"] = question => question.Answer is [var meaning] && !string.IsNullOrWhiteSpace(meaning)
-            ? null
-            : ("answer", "Pontosan egy magyar jelentés kell."),
+        ["word-matching"] = OneMeaning,
+        // CheckQuestion has already made sure the text isn't empty.
+        ["spelling"] = question => SpellableWord(question.Text!) ?? OneMeaning(question),
         ["multiple-choice"] = ChoicesAndAnswers,
         ["ordered"] = ChoicesAndAnswers,
     };
@@ -53,6 +60,31 @@ internal static class QuizRules
         if (question.Time is <= 0) return ("time", "Az idő legalább 1 másodperc.");
         return typeRule(question);
     }
+
+    /// <summary>
+    /// A spelling word is built from one tile per letter a–z plus the extra tiles; every other character is
+    /// given, but a letter outside a–z would have no tile. Composed first, so an accent typed as a separate
+    /// combining mark counts as the accented letter it makes.
+    /// </summary>
+    private static (string Field, string Message)? SpellableWord(string text)
+    {
+        var composed = text.Normalize(NormalizationForm.FormC);
+        foreach (var rune in composed.EnumerateRunes())
+        {
+            var foreign = Rune.IsLetter(rune) && !(rune.IsAscii && char.IsAsciiLetter((char)rune.Value))
+                || Rune.GetUnicodeCategory(rune) == UnicodeCategory.NonSpacingMark;
+            if (foreign) return ("text", $"Csak az angol ábécé betűi lehetnek benne, a(z) „{rune}” nem.");
+        }
+        var letters = composed.Count(char.IsAsciiLetter);
+        if (letters == 0) return ("text", "Legalább egy betű kell.");
+        if (letters > MaxSpellingLetters) return ("text", $"Legfeljebb {MaxSpellingLetters} betű lehet, most {letters} van.");
+        return null;
+    }
+
+    private static (string Field, string Message)? OneMeaning(Question question) =>
+        question.Answer is [var meaning] && !string.IsNullOrWhiteSpace(meaning)
+            ? null
+            : ("answer", "Pontosan egy magyar jelentés kell.");
 
     private static (string Field, string Message)? ChoicesAndAnswers(Question question)
     {

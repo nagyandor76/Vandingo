@@ -40,11 +40,14 @@ export interface PracticeData {
   saveResult(result: NewResult): Promise<void>
 }
 
-/** How a Practice is heard. */
+/**
+ * How a Practice is heard. A reading and a Block sound each settle once they are over: finished,
+ * cut off by the next reading or by `stop`, or failed. They never reject.
+ */
 export interface PracticeAudio {
-  speak(speech: Speech): void
+  speak(speech: Speech): Promise<void>
   stop(): void
-  playBlockSound(allCorrect: boolean): void
+  playBlockSound(allCorrect: boolean): Promise<void>
 }
 
 /** Who practises which Subject, over which inclusive Difficulty range. */

@@ -25,14 +25,15 @@ public class QuizApiTests
             { "name": "Egyiptom", "subject": "history", "difficulty": 3, "default_time": 14, "questions": [
               { "type": "true-false", "text": "A piramis Egyiptomban áll.", "answer": ["true"] },
               { "type": "true-false", "text": "A Nílus Európában folyik.", "answer": ["false"] },
-              { "type": "word-matching", "text": "pyramid", "answer": ["piramis"] }
+              { "type": "word-matching", "text": "pyramid", "answer": ["piramis"] },
+              { "type": "spelling", "text": "pyramid", "answer": ["piramis"] }
             ] }
             """);
 
         var quizzes = await app.CreateClient().GetFromJsonAsync<JsonElement>("/api/subjects/history/quizzes");
 
         Assert.Equal(
-            ["3 Egyiptom true-false=2 word-matching=1", "10 Róma multiple-choice=1"],
+            ["3 Egyiptom spelling=1 true-false=2 word-matching=1", "10 Róma multiple-choice=1"],
             quizzes.EnumerateArray().Select(quiz => string.Join(' ',
                 [
                     quiz.GetProperty("difficulty").GetInt32().ToString(),
@@ -165,6 +166,12 @@ public class QuizApiTests
     [InlineData("""{ "type": "true-false", "text": "Állítás", "answer": ["true"], "time": 0 }""", "time")]
     [InlineData("""{ "type": "word-matching", "text": "temple", "answer": [] }""", "answer")]
     [InlineData("""{ "type": "word-matching", "text": "temple", "answer": ["templom", "szentély"] }""", "answer")]
+    [InlineData("""{ "type": "spelling", "text": "temple", "answer": [] }""", "answer")]
+    [InlineData("""{ "type": "spelling", "text": "temple", "answer": ["templom", "szentély"] }""", "answer")]
+    [InlineData("""{ "type": "spelling", "text": "... ?!", "answer": ["semmi"] }""", "text")]
+    [InlineData("""{ "type": "spelling", "text": "abcdefghij klmnopqrst uvw", "answer": ["túl hosszú"] }""", "text")]
+    [InlineData("""{ "type": "spelling", "text": "café", "answer": ["kávézó"] }""", "text")]
+    [InlineData("""{ "type": "spelling", "text": "café", "answer": ["kávézó"] }""", "text")]
     [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén"], "answer": ["Athén"] }""", "options")]
     [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", "Róma"], "answer": [] }""", "answer")]
     [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", "Róma"], "answer": ["Spárta"] }""", "answer")]
@@ -185,6 +192,27 @@ public class QuizApiTests
         Assert.Equal(field, error.GetProperty("field").GetString());
         Assert.NotEmpty(error.GetProperty("message").GetString()!);
         Assert.False(File.Exists(Path.Combine(app.DataDirectory, "Quizzes", "history", "7.json")));
+    }
+
+    [Fact]
+    public async Task A_spelling_word_may_have_22_letters_besides_spaces_and_punctuation_but_not_23()
+    {
+        using var app = new VandingoApp();
+        app.WriteData("Quizzes/history/subject.json", HistorySubject);
+        var client = app.CreateClient();
+        var quiz = ValidQuiz();
+        var questions = (List<Dictionary<string, object?>>)quiz["questions"]!;
+        questions[4] = new() { ["type"] = "spelling", ["text"] = "Can't stand it, at 1 o'clock, sir!", ["answer"] = new[] { "Ki nem állhatom" } };
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/api/subjects/history/quizzes/7", quiz)).StatusCode);
+
+        questions[4]["text"] = "Can't stand it, at one o'clock, sir!";
+        var response = await client.PutAsJsonAsync("/api/subjects/history/quizzes/8", quiz);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = Assert.Single(await Errors(response));
+        Assert.Equal("text", error.GetProperty("field").GetString());
+        Assert.Equal("Legfeljebb 22 betű lehet, most 25 van.", error.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -359,7 +387,7 @@ public class QuizApiTests
                 ["type"] = "ordered", ["text"] = "Melyik alapult előbb?",
                 ["options"] = new[] { "Athén", "Spárta" }, ["answer"] = new[] { "Spárta", "Athén" },
             },
-            new() { ["type"] = "true-false", ["text"] = "Spárta sziget.", ["answer"] = new[] { "false" } },
+            new() { ["type"] = "spelling", ["text"] = "You're right!", ["answer"] = new[] { "Igazad van!" } },
         },
     };
 
@@ -425,6 +453,33 @@ public class QuizApiTests
         Assert.StartsWith("Mentés ", saved.GetProperty("name").GetString());
         Assert.Equal(["3.json", "subject.json"],
             Directory.GetFiles(Path.Combine(app.DataDirectory, "Quizzes", "history")).Select(Path.GetFileName).Order());
+    }
+
+    [Fact]
+    public async Task Every_Quiz_shipped_with_the_app_can_be_saved_as_it_is()
+    {
+        using var app = new VandingoApp();
+        var client = app.CreateClient();
+        // The repo's Quizzes, copied next to the app at build: the default initial-quiz source.
+        var shipped = Path.Combine(AppContext.BaseDirectory, "Quizzes");
+        var failures = new List<string>();
+
+        foreach (var subjectDirectory in Directory.GetDirectories(shipped))
+        {
+            var subject = Path.GetFileName(subjectDirectory);
+            app.WriteData($"Quizzes/{subject}/subject.json", File.ReadAllText(Path.Combine(subjectDirectory, "subject.json")));
+            foreach (var file in Directory.GetFiles(subjectDirectory, "*.json").Where(f => Path.GetFileName(f) != "subject.json"))
+            {
+                var difficulty = Path.GetFileNameWithoutExtension(file);
+                var response = await client.PutAsync(
+                    $"/api/subjects/{subject}/quizzes/{difficulty}?overwrite=true",
+                    new StringContent(File.ReadAllText(file), System.Text.Encoding.UTF8, "application/json"));
+                if (response.StatusCode != HttpStatusCode.OK)
+                    failures.Add($"{subject}/{difficulty}: {await response.Content.ReadAsStringAsync()}");
+            }
+        }
+
+        Assert.Empty(failures);
     }
 
     [Fact]

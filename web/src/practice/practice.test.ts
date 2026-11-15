@@ -38,15 +38,19 @@ function memoryData({
   return { data, saved }
 }
 
-/** Records what the Practice asked the audio port to do, in order. */
+/** Records what the Practice asked the audio port to do, in order; every reading and sound is over at once. */
 function recordingAudio() {
   const calls: string[] = []
   return {
     calls,
     audio: {
-      speak: ({ text }: { text: string }) => calls.push(`speak ${text}`),
+      speak: async ({ text }: { text: string }) => {
+        calls.push(`speak ${text}`)
+      },
       stop: () => calls.push('stop'),
-      playBlockSound: (allCorrect: boolean) => calls.push(`sound ${allCorrect ? 'correct' : 'wrong'}`),
+      playBlockSound: async (allCorrect: boolean) => {
+        calls.push(`sound ${allCorrect ? 'correct' : 'wrong'}`)
+      },
     },
   }
 }

@@ -1,7 +1,7 @@
 // The Practice engine: the rules of one Practice, independent of the UI.
 // Screens only render the state it returns and forward the Participant's actions.
 
-export type QuestionType = 'true-false' | 'word-matching' | 'multiple-choice' | 'ordered'
+export type QuestionType = 'true-false' | 'word-matching' | 'spelling' | 'multiple-choice' | 'ordered'
 
 /** The question types a Practice can present, with the number of Questions in one whole Block. */
 const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5 }

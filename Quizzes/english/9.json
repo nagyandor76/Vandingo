@@ -1,0 +1,1296 @@
+{
+  "name": "Betűzés 6. osztály 1-",
+  "subject": "english",
+  "difficulty": 9,
+  "default_time": 20,
+  "questions": [
+    {
+      "type": "spelling",
+      "text": "argue",
+      "speak_text": "en-GB",
+      "answer": [
+        "vitatkozik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "belong",
+      "speak_text": "en-GB",
+      "answer": [
+        "tartozik (valahová)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "get (angry)",
+      "speak_text": "en-GB",
+      "answer": [
+        "(feldühödik)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "get along (with sb)",
+      "speak_text": "en-GB",
+      "answer": [
+        "jól kijön (vkivel)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "hit",
+      "speak_text": "en-GB",
+      "answer": [
+        "üt, megüt"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "interest",
+      "speak_text": "en-GB",
+      "answer": [
+        "érdeklődés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "post (a video)",
+      "speak_text": "en-GB",
+      "answer": [
+        "posztol (egy videót)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "stuff",
+      "speak_text": "en-GB",
+      "answer": [
+        "cucc, dolog"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "upset",
+      "speak_text": "en-GB",
+      "answer": [
+        "zaklatott, ideges"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "view",
+      "speak_text": "en-GB",
+      "answer": [
+        "nézet, megtekintés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "creative",
+      "speak_text": "en-GB",
+      "answer": [
+        "kreatív"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "helpful",
+      "speak_text": "en-GB",
+      "answer": [
+        "segítőkész"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "messy",
+      "speak_text": "en-GB",
+      "answer": [
+        "rendetlen"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "have sth in common",
+      "speak_text": "en-GB",
+      "answer": [
+        "van közös bennük"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "Just kidding!",
+      "speak_text": "en-GB",
+      "answer": [
+        "Csak vicceltem!"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "You know what?",
+      "speak_text": "en-GB",
+      "answer": [
+        "Tudod mit?"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "You're right there!",
+      "speak_text": "en-GB",
+      "answer": [
+        "Ebben igazad van!"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "feeling",
+      "speak_text": "en-GB",
+      "answer": [
+        "érzés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "need",
+      "speak_text": "en-GB",
+      "answer": [
+        "szükséglet, szükség"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "negative",
+      "speak_text": "en-GB",
+      "answer": [
+        "negatív"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "positive",
+      "speak_text": "en-GB",
+      "answer": [
+        "pozitív"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "quality",
+      "speak_text": "en-GB",
+      "answer": [
+        "tulajdonság, minőség"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "agree",
+      "speak_text": "en-GB",
+      "answer": [
+        "egyetért"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "behave",
+      "speak_text": "en-GB",
+      "answer": [
+        "viselkedik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "call",
+      "speak_text": "en-GB",
+      "answer": [
+        "hív"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "care (about)",
+      "speak_text": "en-GB",
+      "answer": [
+        "törődik (vmivel/vkivel)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "easy-going",
+      "speak_text": "en-GB",
+      "answer": [
+        "laza, könnyed természetű"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "hide",
+      "speak_text": "en-GB",
+      "answer": [
+        "elrejt(őzik)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "kind",
+      "speak_text": "en-GB",
+      "answer": [
+        "kedves"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "personality",
+      "speak_text": "en-GB",
+      "answer": [
+        "személyiség"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "relaxed",
+      "speak_text": "en-GB",
+      "answer": [
+        "nyugodt"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "rude",
+      "speak_text": "en-GB",
+      "answer": [
+        "goromba, udvariatlan"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "selfish",
+      "speak_text": "en-GB",
+      "answer": [
+        "önző"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "serious",
+      "speak_text": "en-GB",
+      "answer": [
+        "komoly"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "share",
+      "speak_text": "en-GB",
+      "answer": [
+        "megoszt"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "shy",
+      "speak_text": "en-GB",
+      "answer": [
+        "félénk"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "twin",
+      "speak_text": "en-GB",
+      "answer": [
+        "iker"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "What do you say?",
+      "speak_text": "en-GB",
+      "answer": [
+        "Mit szólsz hozzá?"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "worried",
+      "speak_text": "en-GB",
+      "answer": [
+        "aggódó"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "available",
+      "speak_text": "en-GB",
+      "answer": [
+        "elérhető"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "design",
+      "speak_text": "en-GB",
+      "answer": [
+        "tervez"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "dial",
+      "speak_text": "en-GB",
+      "answer": [
+        "tárcsáz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "early",
+      "speak_text": "en-GB",
+      "answer": [
+        "korán"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "heavy",
+      "speak_text": "en-GB",
+      "answer": [
+        "nehéz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "invent",
+      "speak_text": "en-GB",
+      "answer": [
+        "feltalál"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "late",
+      "speak_text": "en-GB",
+      "answer": [
+        "későn"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "magazine",
+      "speak_text": "en-GB",
+      "answer": [
+        "magazin"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "round",
+      "speak_text": "en-GB",
+      "answer": [
+        "kör, körül"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "connect to the internet",
+      "speak_text": "en-GB",
+      "answer": [
+        "csatlakozik az internethez"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "download music apps",
+      "speak_text": "en-GB",
+      "answer": [
+        "zenealkalmazásokat tölt le"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "make a (phone/video) call",
+      "speak_text": "en-GB",
+      "answer": [
+        "(telefon/videó)hívást kezdeményez"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "wireless",
+      "speak_text": "en-GB",
+      "answer": [
+        "vezeték nélküli"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "At this time ...",
+      "speak_text": "en-GB",
+      "answer": [
+        "Ebben az időben ..."
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "For example",
+      "speak_text": "en-GB",
+      "answer": [
+        "Például"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "technology",
+      "speak_text": "en-GB",
+      "answer": [
+        "technológia"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "appear",
+      "speak_text": "en-GB",
+      "answer": [
+        "megjelenik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "article",
+      "speak_text": "en-GB",
+      "answer": [
+        "cikk"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "change",
+      "speak_text": "en-GB",
+      "answer": [
+        "változik, megváltoztat"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "communicate",
+      "speak_text": "en-GB",
+      "answer": [
+        "kommunikál"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "cost",
+      "speak_text": "en-GB",
+      "answer": [
+        "kerül (vmibe), ár"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "engineer",
+      "speak_text": "en-GB",
+      "answer": [
+        "mérnök"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "however",
+      "speak_text": "en-GB",
+      "answer": [
+        "azonban"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "in fact",
+      "speak_text": "en-GB",
+      "answer": [
+        "valójában"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "instead",
+      "speak_text": "en-GB",
+      "answer": [
+        "ehelyett"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "take up",
+      "speak_text": "en-GB",
+      "answer": [
+        "elkezd (hobbit, sportot)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "do aerobics",
+      "speak_text": "en-GB",
+      "answer": [
+        "aerobikozik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "do karate",
+      "speak_text": "en-GB",
+      "answer": [
+        "karatézik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "go mountain biking",
+      "speak_text": "en-GB",
+      "answer": [
+        "hegyikerékpározik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "play handball",
+      "speak_text": "en-GB",
+      "answer": [
+        "kézilabdázik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "play ice hockey",
+      "speak_text": "en-GB",
+      "answer": [
+        "jégkorongozik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "play in/for a team",
+      "speak_text": "en-GB",
+      "answer": [
+        "csapatban/csapatért játszik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "play team sports",
+      "speak_text": "en-GB",
+      "answer": [
+        "csapatsportot űz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "play water polo",
+      "speak_text": "en-GB",
+      "answer": [
+        "vízilabdázik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "In my opinion ...",
+      "speak_text": "en-GB",
+      "answer": [
+        "Véleményem szerint ..."
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "advice",
+      "speak_text": "en-GB",
+      "answer": [
+        "tanács"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "captain",
+      "speak_text": "en-GB",
+      "answer": [
+        "csapatkapitány"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "disagree",
+      "speak_text": "en-GB",
+      "answer": [
+        "nem ért egyet"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "do athletics",
+      "speak_text": "en-GB",
+      "answer": [
+        "atlétikázik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "do exercise",
+      "speak_text": "en-GB",
+      "answer": [
+        "tornázik, testmozgást végez"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "do water sports",
+      "speak_text": "en-GB",
+      "answer": [
+        "vízi sportokat űz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "equipment",
+      "speak_text": "en-GB",
+      "answer": [
+        "felszerelés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "go jogging",
+      "speak_text": "en-GB",
+      "answer": [
+        "kocog"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "go snowboarding",
+      "speak_text": "en-GB",
+      "answer": [
+        "snowboardozik"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "goggles",
+      "speak_text": "en-GB",
+      "answer": [
+        "védőszemüveg"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "imagine",
+      "speak_text": "en-GB",
+      "answer": [
+        "elképzel"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "reason",
+      "speak_text": "en-GB",
+      "answer": [
+        "ok"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "safe",
+      "speak_text": "en-GB",
+      "answer": [
+        "biztonságos"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "teammate",
+      "speak_text": "en-GB",
+      "answer": [
+        "csapattárs"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "tiring",
+      "speak_text": "en-GB",
+      "answer": [
+        "fárasztó"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "answer",
+      "speak_text": "en-GB",
+      "answer": [
+        "válasz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "dislike",
+      "speak_text": "en-GB",
+      "answer": [
+        "nem szeret"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "musical instrument",
+      "speak_text": "en-GB",
+      "answer": [
+        "hangszer"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "still",
+      "speak_text": "en-GB",
+      "answer": [
+        "még mindig"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "take (piano etc.) lessons",
+      "speak_text": "en-GB",
+      "answer": [
+        "(zongora stb.) órákat vesz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "jazz",
+      "speak_text": "en-GB",
+      "answer": [
+        "dzsessz"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "traditional",
+      "speak_text": "en-GB",
+      "answer": [
+        "hagyományos"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "keyboard",
+      "speak_text": "en-GB",
+      "answer": [
+        "billentyűs hangszer"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "saxophone",
+      "speak_text": "en-GB",
+      "answer": [
+        "szaxofon"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "be (really) fond of",
+      "speak_text": "en-GB",
+      "answer": [
+        "nagyon kedvel vmit"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "be one's thing",
+      "speak_text": "en-GB",
+      "answer": [
+        "vki „világa”, vmi, amit szeret"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "at all",
+      "speak_text": "en-GB",
+      "answer": [
+        "egyáltalán"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "band",
+      "speak_text": "en-GB",
+      "answer": [
+        "zenekar"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "be (really) into sth",
+      "speak_text": "en-GB",
+      "answer": [
+        "nagyon érdekel vmi"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "be a (big) fan of",
+      "speak_text": "en-GB",
+      "answer": [
+        "(nagy) rajongója vminek"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "be crazy about",
+      "speak_text": "en-GB",
+      "answer": [
+        "odavan vmiért"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "be interested in",
+      "speak_text": "en-GB",
+      "answer": [
+        "érdeklődik vmi iránt"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "can't stand",
+      "speak_text": "en-GB",
+      "answer": [
+        "ki nem állhat"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "classical",
+      "speak_text": "en-GB",
+      "answer": [
+        "klasszikus"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "classical guitar",
+      "speak_text": "en-GB",
+      "answer": [
+        "klasszikus gitár"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "concert",
+      "speak_text": "en-GB",
+      "answer": [
+        "koncert"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "drums",
+      "speak_text": "en-GB",
+      "answer": [
+        "dob(ok)"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "electric guitar",
+      "speak_text": "en-GB",
+      "answer": [
+        "elektromos gitár"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "flute",
+      "speak_text": "en-GB",
+      "answer": [
+        "fuvola"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "forget",
+      "speak_text": "en-GB",
+      "answer": [
+        "elfelejt"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "heavy metal",
+      "speak_text": "en-GB",
+      "answer": [
+        "heavy metal"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "hip-hop",
+      "speak_text": "en-GB",
+      "answer": [
+        "hiphop"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "kind of",
+      "speak_text": "en-GB",
+      "answer": [
+        "valamennyire, egyfajta"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "perform",
+      "speak_text": "en-GB",
+      "answer": [
+        "előad, fellép"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "piano",
+      "speak_text": "en-GB",
+      "answer": [
+        "zongora"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "pop",
+      "speak_text": "en-GB",
+      "answer": [
+        "popzene"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "question",
+      "speak_text": "en-GB",
+      "answer": [
+        "kérdés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "rock",
+      "speak_text": "en-GB",
+      "answer": [
+        "rockzene"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "violin",
+      "speak_text": "en-GB",
+      "answer": [
+        "hegedű"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "close friend",
+      "speak_text": "en-GB",
+      "answer": [
+        "közeli barát"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "probably",
+      "speak_text": "en-GB",
+      "answer": [
+        "valószínűleg"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "Got to go.",
+      "speak_text": "en-GB",
+      "answer": [
+        "Mennem kell."
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "I have to run.",
+      "speak_text": "en-GB",
+      "answer": [
+        "Sietnem kell."
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "I'm off.",
+      "speak_text": "en-GB",
+      "answer": [
+        "Én indulok."
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "Time for me to go.",
+      "speak_text": "en-GB",
+      "answer": [
+        "Itt az idő, hogy menjek."
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "accessory",
+      "speak_text": "en-GB",
+      "answer": [
+        "kiegészítő"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "bus stop",
+      "speak_text": "en-GB",
+      "answer": [
+        "buszmegálló"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "by the way",
+      "speak_text": "en-GB",
+      "answer": [
+        "egyébként"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "conversation",
+      "speak_text": "en-GB",
+      "answer": [
+        "beszélgetés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "create",
+      "speak_text": "en-GB",
+      "answer": [
+        "létrehoz, alkot"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "gym",
+      "speak_text": "en-GB",
+      "answer": [
+        "edzőterem, tornaterem"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "How are things?",
+      "speak_text": "en-GB",
+      "answer": [
+        "Hogy mennek a dolgok?"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "How's it going?",
+      "speak_text": "en-GB",
+      "answer": [
+        "Hogy vagy? / Hogy megy?"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "Long time no see!",
+      "speak_text": "en-GB",
+      "answer": [
+        "Rég nem láttalak!"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "orchestra",
+      "speak_text": "en-GB",
+      "answer": [
+        "zenekar"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "poster",
+      "speak_text": "en-GB",
+      "answer": [
+        "poszter"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "relationship",
+      "speak_text": "en-GB",
+      "answer": [
+        "kapcsolat"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "Take care.",
+      "speak_text": "en-GB",
+      "answer": [
+        "Vigyázz magadra!"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "What's new?",
+      "speak_text": "en-GB",
+      "answer": [
+        "Mi újság?"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "axes",
+      "speak_text": "en-GB",
+      "answer": [
+        "tengelyek"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "bars",
+      "speak_text": "en-GB",
+      "answer": [
+        "oszlopok"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "category",
+      "speak_text": "en-GB",
+      "answer": [
+        "kategória"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "bar chart",
+      "speak_text": "en-GB",
+      "answer": [
+        "oszlopdiagram"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "compare",
+      "speak_text": "en-GB",
+      "answer": [
+        "összehasonlít"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "data",
+      "speak_text": "en-GB",
+      "answer": [
+        "adatok"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "bar graph",
+      "speak_text": "en-GB",
+      "answer": [
+        "oszlopdiagram"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "organise",
+      "speak_text": "en-GB",
+      "answer": [
+        "rendszerez, szervez"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "bar",
+      "speak_text": "en-GB",
+      "answer": [
+        "oszlop"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "horizontal",
+      "speak_text": "en-GB",
+      "answer": [
+        "vízszintes"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "scale",
+      "speak_text": "en-GB",
+      "answer": [
+        "skála, mérce"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "vertical",
+      "speak_text": "en-GB",
+      "answer": [
+        "függőleges"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "amount",
+      "speak_text": "en-GB",
+      "answer": [
+        "mennyiség"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "information",
+      "speak_text": "en-GB",
+      "answer": [
+        "információ"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "present",
+      "speak_text": "en-GB",
+      "answer": [
+        "bemutat"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "survey",
+      "speak_text": "en-GB",
+      "answer": [
+        "felmérés"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "title",
+      "speak_text": "en-GB",
+      "answer": [
+        "cím"
+      ]
+    },
+    {
+      "type": "spelling",
+      "text": "topic",
+      "speak_text": "en-GB",
+      "answer": [
+        "téma"
+      ]
+    }
+  ]
+}
