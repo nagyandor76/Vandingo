@@ -4,7 +4,7 @@
 export type QuestionType = 'true-false' | 'word-matching' | 'spelling' | 'multiple-choice' | 'ordered'
 
 /** The question types a Practice can present, with the number of Questions in one whole Block. */
-const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5 }
+const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5, spelling: 1 }
 
 /**
  * The playable types a Practice draws from, given a range's Question count per type: a type is used
@@ -52,6 +52,8 @@ export interface BlockQuestion {
   correct?: boolean
   /** True–false: the statement has been the topmost unanswered one, so it is never read aloud automatically again. */
   announced?: boolean
+  /** Spelling: for each letter of the word in turn, the index of the tile placed there, if any. */
+  placed?: (number | undefined)[]
 }
 
 /** Same-type Questions shown and scored together. */
@@ -67,6 +69,59 @@ export interface Block {
    * The words are shown in Block order, so the two columns are shuffled apart.
    */
   meaningOrder?: number[]
+  /** Spelling: the lower-case letters on the tiles, in the order they are shown: the word's letters and two extras. */
+  tiles?: string[]
+}
+
+/** One place in the answer line of a spelling word: a character given in advance, or a letter to place. */
+export type SpellingSlot =
+  | { given: string }
+  | {
+      /** The letter placed here, if any; once scored, a right one in the word's own case. */
+      letter?: string
+      /** Set once the Block is scored: the right letter is here. */
+      correct?: boolean
+    }
+
+/** A spelling Block as the Participant sees it. */
+export interface SpellingView {
+  meaning: string
+  slots: SpellingSlot[]
+  tiles: { letter: string; used: boolean }[]
+  /** Set once the Block is scored: the word as it is written. */
+  correctWord?: string
+}
+
+/** How many random letters are dealt among the tiles besides the word's own. */
+const extraTiles = 2
+
+/** Only the letters a–z of a spelling word are spelled, in either case; every other character is given. */
+const isSpelled = (character: string) => /^[a-z]$/i.test(character)
+
+/** The letters to spell, in lower case. */
+const spelledLetters = (text: string) => [...text].filter(isSpelled).map((letter) => letter.toLowerCase())
+
+/** The spelling Block on screen as the Participant sees it. */
+export function spellingView(block: Block): SpellingView {
+  const [{ question, placed = [] }] = block.questions
+  const tiles = block.tiles!
+  const rightLetters = lettersRight(block.questions[0], tiles)
+  let letterIndex = 0
+  const slots = [...question.text].map((character): SpellingSlot => {
+    if (!isSpelled(character)) return { given: character }
+    const slot = letterIndex++
+    const tile = placed[slot]
+    const letter = tile === undefined ? undefined : tiles[tile]
+    if (!block.closed) return { letter }
+    return { letter: rightLetters[slot] ? character : letter, correct: rightLetters[slot] }
+  })
+  const used = new Set(placed)
+  return {
+    meaning: question.answer[0],
+    slots,
+    tiles: tiles.map((letter, i) => ({ letter, used: used.has(i) })),
+    ...(block.closed && { correctWord: question.text }),
+  }
 }
 
 /** The scores of a finished Practice: what its Result records, apart from who, what and when. */
@@ -220,11 +275,12 @@ const isFullyPaired = (block: Block) => block.questions.every((entry) => entry.p
 
 /**
  * Closes and scores the current Block; after the last one the Practice has its Result.
- * A word-matching Block closes only once every word is paired.
+ * A word-matching Block closes only once every word is paired, a spelling Block once every letter is placed.
  */
 export function closeBlock(state: PracticeState): PracticeState {
   const block = currentBlock(state)
-  if (block.closed || (block.type === 'word-matching' && !isFullyPaired(block))) return state
+  if (block.closed) return state
+  if ((block.type === 'word-matching' && !isFullyPaired(block)) || (block.type === 'spelling' && !isFullySpelled(block))) return state
   const closed = scoreCurrentBlock(state)
   if (state.blockIndex < state.blocks.length - 1) return closed
   const elapsedSeconds = Math.min(Math.round(elapsedMs(state) / 1000), state.timeLimitSeconds)
@@ -247,10 +303,12 @@ const elapsedMs = (state: PracticeState) => state.clock() - state.startedAt
 
 function scoreCurrentBlock(state: PracticeState): PracticeState {
   const block = currentBlock(state)
-  const questions = block.questions.map((entry, i) => ({
-    ...entry,
-    correct: block.type === 'word-matching' ? entry.paired === i : entry.given === entry.question.answer[0],
-  }))
+  const correctOf = (entry: BlockQuestion, i: number) => {
+    if (block.type === 'word-matching') return entry.paired === i
+    if (block.type === 'spelling') return lettersRight(entry, block.tiles!).every(Boolean)
+    return entry.given === entry.question.answer[0]
+  }
+  const questions = block.questions.map((entry, i) => ({ ...entry, correct: correctOf(entry, i) }))
   const allCorrect = questions.every((entry) => entry.correct)
   return { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
 }
@@ -332,6 +390,7 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
     return sizes.map((count): Block => {
       const block: Block = { type, questions: ofType.slice(offset, offset + count).map((question) => ({ question })), closed: false }
       if (type === 'word-matching') block.meaningOrder = shuffledApart([...block.questions.keys()], random)
+      if (type === 'spelling') block.tiles = dealTiles(block.questions[0].question.text, random)
       offset += count
       return block
     })
@@ -347,6 +406,60 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
     total -= block.questions.length
   }
   return blocks
+}
+
+/**
+ * Places a tile of the current spelling Block, given by its index, in the first empty letter slot; a used tile
+ * and a scored Block ignore it.
+ */
+export function place(state: PracticeState, tile: number): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'spelling') return state
+  const [entry] = block.questions
+  const placed = entry.placed ?? spelledLetters(entry.question.text).map(() => undefined)
+  const slot = placed.indexOf(undefined)
+  const onScreen = Number.isInteger(tile) && tile >= 0 && tile < block.tiles!.length
+  if (slot < 0 || !onScreen || placed.includes(tile)) return state
+  const questions = [{ ...entry, placed: placed.with(slot, tile) }]
+  return closeBlock(withCurrentBlock(state, { ...block, questions }))
+}
+
+/** Every letter slot of the spelling word holds a tile; `placed` has one entry per letter once a tile is placed. */
+const isFullySpelled = (block: Block) => {
+  const { placed } = block.questions[0]
+  return placed !== undefined && !placed.includes(undefined)
+}
+
+/** For each letter of a spelling word in turn, whether the tile placed there shows it; an empty slot is wrong. */
+const lettersRight = (entry: BlockQuestion, tiles: string[]) =>
+  spelledLetters(entry.question.text).map((letter, i) => {
+    const tile = entry.placed?.[i]
+    return tile !== undefined && tiles[tile] === letter
+  })
+
+/**
+ * The tiles of a spelling word: one per letter and the extra random letters, shuffled so that reading them left to
+ * right never spells the word, not even skipping tiles. If a few draws all spell it, the tiles go in alphabetical
+ * order, or the reverse: a word of two or more different letters can't read both ways. A word of one letter, or one
+ * letter repeated, spells itself in any order and is dealt as drawn.
+ */
+function dealTiles(text: string, random: () => number): string[] {
+  const letters = spelledLetters(text)
+  const extras = Array.from({ length: extraTiles }, () => String.fromCharCode('a'.charCodeAt(0) + Math.floor(random() * 26)))
+  let tiles = [...letters, ...extras]
+  for (let draw = 0; draw < 5; draw++) {
+    tiles = shuffle(tiles, random)
+    if (!spellsInOrder(tiles, letters)) return tiles
+  }
+  const alphabetical = tiles.toSorted()
+  return [alphabetical, alphabetical.toReversed()].find((order) => !spellsInOrder(order, letters)) ?? tiles
+}
+
+/** Reading the tiles left to right, skipping any of them, gives the word's letters. */
+function spellsInOrder(tiles: string[], letters: string[]): boolean {
+  let next = 0
+  for (const tile of tiles) if (tile === letters[next]) next++
+  return next === letters.length
 }
 
 /** Shuffles the indices so that the order always differs from the original one, rotating it if the draw left it in place. */

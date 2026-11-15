@@ -31,7 +31,7 @@ A question type in which the participant is shown a Hungarian meaning and builds
 *Avoid*: Typing, dictation
 
 **Playable type**:
-A question type that a practice can currently present: true–false and word-matching. Questions of other types are kept but skipped.
+A question type that a practice can currently present: true–false, word-matching and spelling. Questions of other types are kept but skipped.
 
 ### Playing
 

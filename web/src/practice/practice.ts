@@ -9,7 +9,9 @@ import {
   currentBlock,
   isPassed,
   next,
+  place,
   readAloud,
+  spellingView,
   startPractice,
   tap,
   tick,
@@ -20,11 +22,12 @@ import {
   type Selection,
   type Side,
   type Speech,
+  type SpellingView,
   type TrueFalseAnswer,
 } from './engine.ts'
 
 // What a screen needs to render a Practice, so it never reaches into the engine itself.
-export type { Block, BlockQuestion, PracticeResult, Selection, Side, TrueFalseAnswer } from './engine.ts'
+export type { Block, BlockQuestion, PracticeResult, Selection, Side, SpellingSlot, SpellingView, TrueFalseAnswer } from './engine.ts'
 
 /** How often the countdown follows the clock. */
 const tickMs = 250
@@ -81,6 +84,8 @@ export type PracticeSnapshot =
       progress: number
       correctInBlock: number
       selection?: Selection
+      /** A spelling Block: the word's meaning, its answer line and its tiles. */
+      spelling?: SpellingView
       /** The Practice has its Result: the last Block is scored, or time ran out. */
       resultReady: boolean
       timedOut: boolean
@@ -96,6 +101,8 @@ export interface Practice {
   answer(questionIndex: number, value: TrueFalseAnswer): void
   /** Taps a word or a meaning of the current word-matching Block, by its Question's index in the Block. */
   tap(side: Side, index: number): void
+  /** Places a tile of the current spelling Block, by its index, in the first empty slot of the word. */
+  place(tile: number): void
   /** Reads a Question of the current Block aloud again, if it has a `speak_text`. */
   readAloud(questionIndex: number): void
   /** Closes and scores the current true–false Block. */
@@ -135,6 +142,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
       progress: (state.blockIndex + (block.closed ? 1 : 0)) / state.blocks.length,
       correctInBlock: block.questions.filter((entry) => entry.correct).length,
       selection: state.selection,
+      ...(block.type === 'spelling' && { spelling: spellingView(block) }),
       resultReady: state.result !== undefined,
       timedOut: state.result !== undefined && state.remainingSeconds === 0,
     }
@@ -210,6 +218,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     getSnapshot: () => snapshot,
     answer: (questionIndex, value) => state && update(answer(state, questionIndex, value)),
     tap: (side, index) => state && update(tap(state, side, index)),
+    place: (tile) => state && update(place(state, tile)),
     readAloud: (questionIndex) => state && update(readAloud(state, questionIndex)),
     close: () => state && update(closeBlock(state)),
     next: () => state && update(next(state)),

@@ -13,6 +13,7 @@ import {
   type SaveStatus,
   type Selection,
   type Side,
+  type SpellingView,
   type TrueFalseAnswer,
 } from '../practice/practice.ts'
 import { formatTime } from '../format.ts'
@@ -112,7 +113,7 @@ export default function Practice() {
       <Stack spacing={1.25} sx={{ px: 2, py: 2, flex: 1, maxWidth: 600, width: '100%', mx: 'auto' }}>
         <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between', mb: 0.5 }}>
           <Typography variant="h3" component="h1">
-            {block.type === 'word-matching' ? 'Párosítsd össze!' : 'Igaz vagy hamis?'}
+            {titles[block.type]}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {snapshot.subjectName} · {blockIndex + 1}/{blockCount}
@@ -120,6 +121,8 @@ export default function Practice() {
         </Stack>
         {block.type === 'word-matching' ? (
           <WordMatching block={block} selection={snapshot.selection} onTap={practice.tap} />
+        ) : block.type === 'spelling' && snapshot.spelling ? (
+          <Spelling key={blockIndex} block={block} spelling={snapshot.spelling} onPlace={practice.place} />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
@@ -156,10 +159,10 @@ export default function Practice() {
             <Button variant="contained" color={allCorrect ? 'primary' : 'error'} sx={{ minWidth: 140 }} onClick={practice.next}>
               {resultReady ? 'Eredmény' : 'Következő'}
             </Button>
-          ) : block.type === 'word-matching' ? (
-            // A word-matching Block is scored as soon as every word is paired.
+          ) : hints[block.type] ? (
+            // These Blocks are scored by themselves: once every word is paired, or the word is spelled.
             <Typography color="text.secondary" sx={{ flex: 1, minHeight: 48, display: 'flex', alignItems: 'center' }}>
-              Koppints egy szóra, majd a párjára.
+              {hints[block.type]}
             </Typography>
           ) : (
             <Button variant="contained" fullWidth onClick={practice.close}>
@@ -170,6 +173,18 @@ export default function Practice() {
       </Box>
     </Box>
   )
+}
+
+const titles: Partial<Record<Block['type'], string>> = {
+  'true-false': 'Igaz vagy hamis?',
+  'word-matching': 'Párosítsd össze!',
+  spelling: 'Rakd ki angolul!',
+}
+
+/** What to do in a Block that is scored by itself, without a „Kész” button. */
+const hints: Partial<Record<Block['type'], string>> = {
+  'word-matching': 'Koppints egy szóra, majd a párjára.',
+  spelling: 'Koppints a betűkre sorban.',
 }
 
 const answerLabels: Record<TrueFalseAnswer, string> = { true: 'Igaz', false: 'Hamis' }
@@ -317,6 +332,81 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
       )}
       <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{text}</Typography>
     </ButtonBase>
+  )
+}
+
+/**
+ * A spelling Block: the Hungarian meaning, the answer line with its spaces and punctuation given, and the letter
+ * tiles. A tapped tile fills the next empty slot and fades. Once scored, each letter turns green or red, a right
+ * one showing the word's own case; a wrong word shows the correct one below.
+ */
+function Spelling({ block, spelling, onPlace }: { block: Block; spelling: SpellingView; onPlace: (tile: number) => void }) {
+  return (
+    <Stack spacing={2.5} sx={{ alignItems: 'center', pt: 1 }}>
+      <Typography variant="h2" component="p" sx={{ textAlign: 'center' }}>
+        {spelling.meaning}
+      </Typography>
+      <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 0.5, rowGap: 1 }} aria-label="Válasz">
+        {spelling.slots.map((slot, i) => {
+          if ('given' in slot) {
+            return (
+              <Box key={i} sx={{ minWidth: slot.given === ' ' ? 12 : 'auto', display: 'grid', placeItems: 'end center', fontSize: 22, fontWeight: 600 }}>
+                {slot.given}
+              </Box>
+            )
+          }
+          const tone = slot.correct === undefined ? undefined : slot.correct ? 'success.main' : 'error.main'
+          return (
+            <Box
+              key={i}
+              sx={{
+                width: 28,
+                height: 36,
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 22,
+                fontWeight: 700,
+                borderBottom: 2,
+                borderColor: tone ?? 'text.secondary',
+                color: tone ?? 'text.primary',
+              }}
+            >
+              {slot.letter}
+            </Box>
+          )
+        })}
+      </Stack>
+      {spelling.correctWord && !block.allCorrect && (
+        <Typography sx={{ fontWeight: 600 }}>
+          Helyesen: <Box component="span" sx={{ color: 'success.main' }}>{spelling.correctWord}</Box>
+        </Typography>
+      )}
+      <Stack direction="row" sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
+        {spelling.tiles.map((tile, i) => (
+          <ButtonBase
+            key={i}
+            onClick={() => onPlace(i)}
+            disabled={tile.used || block.closed}
+            aria-label={tile.letter}
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 1,
+              border: 1.5,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              boxShadow: '0 1px 2px rgba(16,24,40,0.06)',
+              fontSize: 22,
+              fontWeight: 700,
+              opacity: tile.used ? 0.3 : 1,
+              transition: 'opacity 120ms',
+            }}
+          >
+            {tile.letter}
+          </ButtonBase>
+        ))}
+      </Stack>
+    </Stack>
   )
 }
 

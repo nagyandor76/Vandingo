@@ -62,8 +62,8 @@ const choice = { participant: 'Vanda', subject: 'history', from: 1, to: 2 }
 
 let practice: Practice | undefined
 
-function open(data: PracticeData, audio = recordingAudio().audio) {
-  practice = createPractice(choice, { data, audio, random: inOrder })
+function open(data: PracticeData, audio = recordingAudio().audio, random = inOrder) {
+  practice = createPractice(choice, { data, audio, random })
   return practice
 }
 
@@ -415,5 +415,167 @@ describe('what the snapshot tells', () => {
 
     p.next()
     expect(p.getSnapshot()).toMatchObject({ progress: 0.5, blockIndex: 1, correctInBlock: 0 })
+  })
+})
+
+describe('a spelling Block', () => {
+  const spelling = (text: string, meaning: string): PracticeQuestion => ({ type: 'spelling', text, answer: [meaning], time: 20 })
+
+  /** The running snapshot's spelling Block, as the Participant sees it. */
+  const spellingOf = (p: Practice) => {
+    const snapshot = p.getSnapshot()
+    if (snapshot.phase !== 'running' || !snapshot.spelling) throw new Error('no spelling Block on screen')
+    return snapshot.spelling
+  }
+
+  const letters = (tiles: { letter: string }[]) => tiles.map((tile) => tile.letter)
+
+  it('shows one word with its Hungarian meaning, its spaces and punctuation given, and a tile per letter plus two', async () => {
+    const p = open(memoryData({ questions: [spelling('Get (up)!', 'Kelj fel!')] }).data)
+    await settle()
+
+    const { meaning, slots, tiles } = spellingOf(p)
+    expect(p.getSnapshot()).toMatchObject({ blockCount: 1 })
+    expect(meaning).toBe('Kelj fel!')
+    expect(slots).toEqual([
+      { letter: undefined },
+      { letter: undefined },
+      { letter: undefined },
+      { given: ' ' },
+      { given: '(' },
+      { letter: undefined },
+      { letter: undefined },
+      { given: ')' },
+      { given: '!' },
+    ])
+    expect(tiles).toHaveLength(7)
+    expect(tiles.every((tile) => !tile.used && /^[a-z]$/.test(tile.letter))).toBe(true)
+    const extras = [...letters(tiles)]
+    for (const letter of 'getup') extras.splice(extras.indexOf(letter), 1)
+    expect(extras).toHaveLength(2)
+  })
+
+  it('never deals the tiles so that they spell the word in order', async () => {
+    // Reading the tiles left to right, skipping any of them, must not give the word.
+    const spellsInOrder = (tiles: string[], word: string) => {
+      let next = 0
+      for (const letter of tiles) if (letter === word[next]) next++
+      return next === word.length
+    }
+    // `inOrder` shuffles nothing, so a plain deal would leave the word's letters in place.
+    const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data)
+    await settle()
+
+    expect(spellsInOrder(letters(spellingOf(p).tiles), 'hit')).toBe(false)
+
+    // Extra letters `a` and `b` for `ab`, then no shuffling at all: every draw and every rotation spells it.
+    const draws = [0, 0.05]
+    const ab = open(memoryData({ questions: [spelling('ab', 'ab')] }).data, undefined, () => draws.shift() ?? inOrder())
+    await settle()
+
+    expect(spellsInOrder(letters(spellingOf(ab).tiles), 'ab')).toBe(false)
+  })
+
+  it('keeps the correct word out of the snapshot until the word is scored', async () => {
+    const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data)
+    await settle()
+
+    expect(spellingOf(p).correctWord).toBeUndefined()
+  })
+
+  it('ignores a tile that is not on the screen', async () => {
+    const p = open(memoryData({ questions: [spelling('hi', 'szia')] }).data)
+    await settle()
+
+    p.place(-1)
+    p.place(99)
+
+    expect(spellingOf(p).slots).toEqual([{ letter: undefined }, { letter: undefined }])
+  })
+
+  /** Places the tile of each letter in turn, picking an unused tile of that letter. */
+  const spell = (p: Practice, word: string) => {
+    for (const letter of word) p.place(spellingOf(p).tiles.findIndex((tile) => tile.letter === letter && !tile.used))
+  }
+
+  it('places a tapped tile in the next empty slot, and a used tile only once', async () => {
+    const p = open(memoryData({ questions: [spelling('a hit', 'egy ütés')] }).data)
+    await settle()
+    const tile = (letter: string) => spellingOf(p).tiles.findIndex((t) => t.letter === letter)
+
+    p.place(tile('h'))
+    p.place(tile('h'))
+    p.place(tile('a'))
+
+    const { slots, tiles } = spellingOf(p)
+    expect(slots).toEqual([{ letter: 'h' }, { given: ' ' }, { letter: 'a' }, { letter: undefined }, { letter: undefined }])
+    expect(tiles.filter((t) => t.used).map((t) => t.letter).sort()).toEqual(['a', 'h'])
+  })
+
+  it('is scored right as the last slot is filled, whatever the case of the word, with the correct sound', async () => {
+    const { audio, calls } = recordingAudio()
+    const p = open(memoryData({ questions: [spelling('Hi!', 'Szia!'), spelling('Hit', 'üt')] }).data, audio)
+    await settle()
+
+    p.close()
+    spell(p, 'h')
+    expect(p.getSnapshot()).toMatchObject({ block: { closed: false } })
+
+    spell(p, 'i')
+
+    expect(p.getSnapshot()).toMatchObject({ block: { closed: true, allCorrect: true }, correctInBlock: 1 })
+    expect(spellingOf(p)).toMatchObject({
+      slots: [{ letter: 'H', correct: true }, { letter: 'i', correct: true }, { given: '!' }],
+      correctWord: 'Hi!',
+    })
+    expect(calls).toEqual(['stop', 'sound correct'])
+  })
+
+  it('marks each wrong letter of a wrong word, with the wrong sound', async () => {
+    const { audio, calls } = recordingAudio()
+    const p = open(memoryData({ questions: [spelling('hit', 'üt'), spelling('hat', 'kalap')] }).data, audio)
+    await settle()
+
+    spell(p, 'iht')
+
+    expect(p.getSnapshot()).toMatchObject({ block: { closed: true, allCorrect: false }, correctInBlock: 0 })
+    expect(spellingOf(p).slots).toEqual([
+      { letter: 'i', correct: false },
+      { letter: 'h', correct: false },
+      { letter: 't', correct: true },
+    ])
+    expect(calls).toEqual(['stop', 'sound wrong'])
+  })
+
+  it('counts a half-spelled word as wrong when time runs out', async () => {
+    const p = open(memoryData({ questions: [spelling('hit', 'üt')] }).data)
+    await settle()
+    spell(p, 'h')
+
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(p.getSnapshot()).toMatchObject({ timedOut: true, block: { closed: true, allCorrect: false } })
+    expect(spellingOf(p).slots).toEqual([
+      { letter: 'h', correct: true },
+      { letter: undefined, correct: false },
+      { letter: undefined, correct: false },
+    ])
+  })
+
+  it('comes one word per Block, mixed with the Blocks of other types', async () => {
+    const p = open(memoryData({ questions: [...statements(3), spelling('hit', 'üt'), spelling('hat', 'kalap')] }).data)
+    await settle()
+
+    expect(p.getSnapshot()).toMatchObject({ blockCount: 3 })
+    const types: string[] = []
+    for (let i = 0; i < 3; i++) {
+      const snapshot = p.getSnapshot()
+      if (snapshot.phase !== 'running') throw new Error('not running')
+      types.push(snapshot.block.type)
+      if (snapshot.block.type === 'spelling') spell(p, snapshot.block.questions[0].question.text)
+      else p.close()
+      p.next()
+    }
+    expect(types.sort()).toEqual(['spelling', 'spelling', 'true-false'])
   })
 })
