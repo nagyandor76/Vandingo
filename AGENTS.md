@@ -21,6 +21,8 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 - **Backend HTTP API tests:** `dotnet test` (repo root).
 - **Practice engine tests:** `cd web && npm test`.
 - **Typecheck frontend:** `cd web && npm run typecheck`.
+- **Lint frontend:** `cd web && npm run lint` (oxlint, `web/.oxlintrc.json`).
+- **Practice (`web/src/practice/`, `web/src/screens/Practice.tsx`):** layers, ports and rules in `docs/practice-modul.md`.
 - **Deploy:** Railway builds the root `Dockerfile`; the data directory is a Railway Volume at `/data`. See `docs/deployment.md`.
 
 The data directory is set by `Vandingo:DataDirectory` (env var `Vandingo__DataDirectory`; default `/data`, `../../data` in Development; relative paths resolve against `src/Vandingo.Api`). The initial-quiz source is `Vandingo:SeedDirectory` (default: the `Quizzes/` copied next to the app at build).
