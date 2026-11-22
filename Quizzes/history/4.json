@@ -1,0 +1,98 @@
+{
+  "name": "Magyar történelem 4. szint",
+  "subject": "history",
+  "difficulty": 4,
+  "default_time": 20,
+  "questions": [
+    {
+      "type": "multiple-choice",
+      "text": "Melyik uralkodók voltak Árpád-házi királyok?",
+      "options": ["Szent István", "Mátyás", "IV. Béla", "Könyves Kálmán", "Károly Róbert"],
+      "answer": ["Szent István", "IV. Béla", "Könyves Kálmán"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Ki volt Magyarország első királya?",
+      "options": ["Géza", "Szent István", "Árpád", "Szent László"],
+      "answer": ["Szent István"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik városok voltak valaha a magyar királyok székhelyei?",
+      "options": ["Esztergom", "Székesfehérvár", "Buda", "Visegrád"],
+      "answer": ["Esztergom", "Székesfehérvár", "Buda", "Visegrád"],
+      "time": 15
+    },
+    {
+      "type": "multiple-choice",
+      "text": "1848. március 15-én Pesten a forradalmi ifjúság kinyomtatta a 12 pontot és a Nemzeti dalt. Kik voltak a márciusi ifjak vezetői közül?",
+      "options": ["Petőfi Sándor", "Jókai Mór", "Vasvári Pál", "Széchenyi István", "Metternich"],
+      "answer": ["Petőfi Sándor", "Jókai Mór", "Vasvári Pál"],
+      "time": 30
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik csatákban harcoltak a magyarok a törökök ellen?",
+      "options": ["Mohács", "Nándorfehérvár", "Muhi", "Eger", "Pozsony", "Kőszeg", "Augsburg"],
+      "answer": ["Mohács", "Nándorfehérvár", "Eger", "Kőszeg"],
+      "time": 25
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mi jellemző a tatárjárásra?",
+      "options": [
+        "1241-ben a muhi csatában a magyar sereg vereséget szenvedett",
+        "IV. Béla a tengermelléken, Trau várában talált menedéket",
+        "A tatárok Mátyás király idején jöttek",
+        "Utána IV. Béla kővárakat építtetett"
+      ],
+      "answer": [
+        "1241-ben a muhi csatában a magyar sereg vereséget szenvedett",
+        "IV. Béla a tengermelléken, Trau várában talált menedéket",
+        "Utána IV. Béla kővárakat építtetett"
+      ],
+      "time": 30
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Ki írta a Himnuszt?",
+      "options": ["Vörösmarty Mihály", "Kölcsey Ferenc", "Petőfi Sándor"],
+      "answer": ["Kölcsey Ferenc"],
+      "speak_text": "hu-HU"
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik években volt forradalom Magyarországon?",
+      "options": ["1848", "1867", "1956", "1920"],
+      "answer": ["1848", "1956"],
+      "speak_text": "hu-HU"
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik igaz Hunyadi Mátyásra?",
+      "options": ["Holló volt a címerében", "Fekete sereget tartott fenn", "Ő alapította Budapestet"],
+      "answer": ["Holló volt a címerében", "Fekete sereget tartott fenn"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Ki vezette a honfoglaló magyarokat?",
+      "options": ["Árpád", "Attila"],
+      "answer": ["Árpád"]
+    },
+    {
+      "type": "true-false",
+      "text": "A mohácsi csata 1526-ban volt.",
+      "answer": ["true"]
+    },
+    {
+      "type": "true-false",
+      "text": "Szent István Mátyás király fia volt.",
+      "answer": ["false"]
+    },
+    {
+      "type": "true-false",
+      "text": "A kiegyezés 1867-ben jött létre.",
+      "answer": ["true"]
+    }
+  ]
+}
