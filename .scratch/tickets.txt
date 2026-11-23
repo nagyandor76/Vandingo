@@ -1,7 +1,17 @@
-Kész (20)
+Kész (30)
 architecture-followups 01  done    01: Az `api.ts` adja vissza a foglaló Quizeket a Quiz mentésénél
 architecture-followups 02  done    02: Egy sérült Result-fájl ne vigye el a teljes Result-listát
+multiple-choice 01  done    01: A szerkesztőben „Többválasztásos” a típus neve
+multiple-choice 02  done    02: Egy többválasztásos Block lejátszható
+multiple-choice 03  done    03: Felolvasás kiértékelés után, auto-advance a felolvasás végétől
+multiple-choice 04  done    04: A többválasztásos Block telefonra méretezett elrendezése
 practice-module 01  done    01: Practice modul – a Practice életciklusa egy helyen
+spelling       01  done    01: Az audio port jelzi, ha egy hang vagy felolvasás véget ért
+spelling       02  done    02: A betűzős Quiz menthető a szerkesztőben
+spelling       03  done    03: Egy betűzős Block lejátszható
+spelling       04  done    04: Javítás kirakás közben: ⌫ és a lerakott betű visszavétele
+spelling       05  done    05: Felolvasás kiértékelés után, és auto-advance a felolvasás végétől
+spelling       06  done    06: Telefonra méretezett gombok
 vandingo-mvp   01  done    01: Alapváz – üres alkalmazás, amely elindul
 vandingo-mvp   02  done    02: A Practice indítóképernyője
 vandingo-mvp   03  done    03: Igaz–hamis Practice az elejétől a Resultig

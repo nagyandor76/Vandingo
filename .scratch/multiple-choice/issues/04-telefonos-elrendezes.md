@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [2]
 ---
 
@@ -11,12 +11,14 @@ Forrás: [spec](../spec.md), „Képernyő-elrendezése”, „Kész gomb”. P�
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Függőleges gomblista, a teljes szélességben, hosszú szövegnél sortörés
-- [ ] Görgethető tartalom 2–6 (és több) opcióval telefonméreten
-- [ ] „Kész” gomb a láblécben, kiértékelés után eltűnik vagy a továbblépés veszi át (mint a többi típusnál)
-- [ ] Zöld–piros állapotok a szópárosító színeivel (`web/src/theme.ts`)
-- [ ] Typecheck és lint zöld; a kinézet kézi ellenőrzés (megjegyzésben jelezve, ha böngészőben nem volt kipróbálva)
+- [x] Függőleges gomblista, a teljes szélességben, hosszú szövegnél sortörés
+- [x] Görgethető tartalom 2–6 (és több) opcióval telefonméreten
+- [x] „Kész” gomb a láblécben, kiértékelés után eltűnik vagy a továbblépés veszi át (mint a többi típusnál)
+- [x] Zöld–piros állapotok a szópárosító színeivel (`web/src/theme.ts`)
+- [x] Typecheck és lint zöld; a kinézet kézi ellenőrzés (megjegyzésben jelezve, ha böngészőben nem volt kipróbálva)
 
 ## Comments
+
+**2026-11-23:** Kész (c89ea98; review-javítás 246fc1f). Böngészőben (Playwright, 360×740 és 412×915) kipróbálva a 03-as beolvasztása előtt; a 🔊 gomb helye és a review utáni ✓ jelvény böngészőben nincs megnézve. Nem kért, de bent maradt: kiértékelés után a nem érintett opciók halványulnak, cím: „Válaszd ki a helyeseket!”.

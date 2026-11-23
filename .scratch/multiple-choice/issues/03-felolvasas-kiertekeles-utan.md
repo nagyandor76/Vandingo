@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: [2]
 ---
 
@@ -11,14 +11,16 @@ Forrás: [spec](../spec.md), „Felolvasás”. Párhuzam: [spelling 05](../../s
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Kiértékelés előtt nincs felolvasás (magától sem, `readAloud`-ra sem)
-- [ ] Kiértékelés után: `stop`, Block hang, majd a `speak_text` felolvasása
-- [ ] Kiértékelés után a `readAloud` újraolvas, és a hang végét megvárja
-- [ ] `auto_advance`: 2 s a felolvasás végétől; `speak_text` nélkül a pontozástól
-- [ ] A pillanatkép jelzi, hogy a kérdés meghallgatható-e (mint a betűzésnél a `hearable`), és a képernyő ennek megfelelően mutatja a felolvasás gombot
-- [ ] Tesztek a Practice modulon a rögzítő hang-porttal (`endSound`, `endReading`) és hamis időzítővel
-- [ ] A `docs/practice-modul.md` „Block-hang” szabálya a többválasztásosat is említi
+- [x] Kiértékelés előtt nincs felolvasás (magától sem, `readAloud`-ra sem)
+- [x] Kiértékelés után: `stop`, Block hang, majd a `speak_text` felolvasása
+- [x] Kiértékelés után a `readAloud` újraolvas, és a hang végét megvárja
+- [x] `auto_advance`: 2 s a felolvasás végétől; `speak_text` nélkül a pontozástól
+- [x] A pillanatkép jelzi, hogy a kérdés meghallgatható-e (mint a betűzésnél a `hearable`), és a képernyő ennek megfelelően mutatja a felolvasás gombot
+- [x] Tesztek a Practice modulon a rögzítő hang-porttal (`endSound`, `endReading`) és hamis időzítővel
+- [x] A `docs/practice-modul.md` „Block-hang” szabálya a többválasztásosat is említi
 
 ## Comments
+
+**2026-11-23:** Kész (5236da6). Közös szabály a betűzéssel: `readOnlyOnceScored` az engine-ben; a nézetben `hearable`.

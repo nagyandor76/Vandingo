@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: []
 ---
 
@@ -11,11 +11,13 @@ Forrás: [spec](../spec.md), „Szerkesztő”, „Backend-ellenőrzés”, „Q
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A típusválasztóban és a kimásolt táblázatban „Többválasztásos”
-- [ ] A beillesztés a „Többválasztásos” és a régi „Feleletválasztós” feliratot is `multiple-choice`-ként olvassa
-- [ ] A meglévő API-tesztek lefedik: érvényes Quiz mentődik; üres `answer`, `options`-ben nem szereplő `answer`, 2-nél kevesebb `options` elutasítva a saját mezőjén; az összesítők számolják a `multiple-choice`-t (ami hiányzik, pótolva)
-- [ ] Szerkesztő-tesztek (`web/src/editor/clipboard.test.ts`) az új felirattal
+- [x] A típusválasztóban és a kimásolt táblázatban „Többválasztásos”
+- [x] A beillesztés a „Többválasztásos” és a régi „Feleletválasztós” feliratot is `multiple-choice`-ként olvassa
+- [x] A meglévő API-tesztek lefedik: érvényes Quiz mentődik; üres `answer`, `options`-ben nem szereplő `answer`, 2-nél kevesebb `options` elutasítva a saját mezőjén; az összesítők számolják a `multiple-choice`-t (ami hiányzik, pótolva)
+- [x] Szerkesztő-tesztek (`web/src/editor/clipboard.test.ts`) az új felirattal
 
 ## Comments
+
+**2026-11-23:** Kész (b081f6b). A típusnév „Többválasztásos”, a beillesztés a régi „Feleletválasztós” feliratot is elfogadja. A szerveroldali ellenőrzés és az API-tesztek már megvoltak; pótolva a csak szóközös opció elutasítása.

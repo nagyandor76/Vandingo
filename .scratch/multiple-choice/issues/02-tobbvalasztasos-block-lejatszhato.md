@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 blocked_by: []
 ---
 
@@ -11,17 +11,19 @@ Forrás: [spec](../spec.md), „Question type”, „Mit kell választani”, �
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A `multiple-choice` játszható típus, egy teljes Block 1 Question; a tartomány egy többválasztásos Questionnel már használható (`usableTypes`)
-- [ ] A válaszlehetőségek sorrendje a véletlenforrással kevert
-- [ ] `toggle`-szerű művelet a Practice modulon (ki-be kapcsolja a kijelölést), és `done`/„Kész” művelet; lezárás után mindkettő hatástalan
-- [ ] Pontozás: 100% csak ha minden helyes ki van jelölve és semmi helytelen; részleges vagy helytelen kijelölés 0%
-- [ ] A pillanatképben `multipleChoice` nézet: kérdésszöveg, opciók (szöveg, kijelölve-e, kiértékelés után helyes/hibás)
-- [ ] Időlejáratnál a Block hibás
-- [ ] Más típusokkal vegyesen is működik; egy Practice-ben egy Question egyszer
-- [ ] Egyszerű képernyő: kérdés, opciógombok, „Kész” gomb, zöld–piros visszajelzés; a képernyő csak a Practice modult importálja
-- [ ] Tesztek a Practice modulon (`web/src/practice/practice.test.ts`)
-- [ ] A GLOSSARY **Playable type** szócikkében a multiple-choice is szerepel; a `docs/practice-modul.md` a új műveleteket és nézetet is említi
+- [x] A `multiple-choice` játszható típus, egy teljes Block 1 Question; a tartomány egy többválasztásos Questionnel már használható (`usableTypes`)
+- [x] A válaszlehetőségek sorrendje a véletlenforrással kevert
+- [x] `toggle`-szerű művelet a Practice modulon (ki-be kapcsolja a kijelölést), és `done`/„Kész” művelet; lezárás után mindkettő hatástalan
+- [x] Pontozás: 100% csak ha minden helyes ki van jelölve és semmi helytelen; részleges vagy helytelen kijelölés 0%
+- [x] A pillanatképben `multipleChoice` nézet: kérdésszöveg, opciók (szöveg, kijelölve-e, kiértékelés után helyes/hibás)
+- [x] Időlejáratnál a Block hibás
+- [x] Más típusokkal vegyesen is működik; egy Practice-ben egy Question egyszer
+- [x] Egyszerű képernyő: kérdés, opciógombok, „Kész” gomb, zöld–piros visszajelzés; a képernyő csak a Practice modult importálja
+- [x] Tesztek a Practice modulon (`web/src/practice/practice.test.ts`)
+- [x] A GLOSSARY **Playable type** szócikkében a multiple-choice is szerepel; a `docs/practice-modul.md` a új műveleteket és nézetet is említi
 
 ## Comments
+
+**2026-11-23:** Kész (798cc69; review-javítás 2fba7fa, 246fc1f). „Kész” = a meglévő `close()`, kijelölés: `toggle(option)`, nézet: `multipleChoice`. Lejárt időnél minden helyes opció piros; az opciók sosem a megírt sorrendben (`shuffledApart`).
