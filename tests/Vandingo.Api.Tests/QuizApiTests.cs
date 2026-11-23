@@ -173,6 +173,7 @@ public class QuizApiTests
     [InlineData("""{ "type": "spelling", "text": "café", "answer": ["kávézó"] }""", "text")]
     [InlineData("""{ "type": "spelling", "text": "café", "answer": ["kávézó"] }""", "text")]
     [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén"], "answer": ["Athén"] }""", "options")]
+    [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", " "], "answer": ["Athén"] }""", "options")]
     [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", "Róma"], "answer": [] }""", "answer")]
     [InlineData("""{ "type": "multiple-choice", "text": "Melyik?", "options": ["Athén", "Róma"], "answer": ["Spárta"] }""", "answer")]
     [InlineData("""{ "type": "ordered", "text": "Sorrend?", "answer": ["Athén", "Róma"] }""", "options")]
