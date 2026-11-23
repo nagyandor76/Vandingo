@@ -132,7 +132,12 @@ export default function Practice() {
             onReadAloud={() => practice.readAloud(0)}
           />
         ) : block.type === 'multiple-choice' && snapshot.multipleChoice ? (
-          <MultipleChoice multipleChoice={snapshot.multipleChoice} closed={block.closed} onToggle={practice.toggle} />
+          <MultipleChoice
+            multipleChoice={snapshot.multipleChoice}
+            closed={block.closed}
+            onToggle={practice.toggle}
+            onReadAloud={() => practice.readAloud(0)}
+          />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
@@ -300,17 +305,24 @@ function WordMatching({ block, selection, onTap }: { block: Block; selection?: S
  * A multiple-choice Block: the question and its options in a column. A tap chooses an option or lets go of it;
  * „Kész” scores the Block. Once scored, a right answer chosen turns green, a wrong option chosen or a right answer
  * missed turns red, and the rest fade. Each option takes the full width; a long one wraps into a taller tile.
+ * Once scored, 🔊 reads the question again if it has a reading.
  */
-function MultipleChoice({ multipleChoice, closed, onToggle }: {
+function MultipleChoice({ multipleChoice, closed, onToggle, onReadAloud }: {
   multipleChoice: MultipleChoiceView
   closed: boolean
   onToggle: (option: number) => void
+  onReadAloud: () => void
 }) {
   return (
     <Stack spacing={1.25}>
       <Typography variant="h3" component="p" sx={{ fontWeight: 500, mb: 0.5, overflowWrap: 'anywhere' }}>
         {multipleChoice.text}
       </Typography>
+      {multipleChoice.hearable && (
+        <ButtonBase aria-label="Felolvasás" onClick={onReadAloud} sx={{ width: 44, height: 44, fontSize: 22, borderRadius: 1, alignSelf: 'flex-start' }}>
+          🔊
+        </ButtonBase>
+      )}
       {multipleChoice.options.map((option, i) => (
         <Tile
           key={i}

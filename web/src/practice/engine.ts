@@ -129,7 +129,7 @@ export function spellingView(block: Block): SpellingView {
     slots,
     tiles: tiles.map((letter, i) => ({ letter, used: used.has(i) })),
     ...(block.closed && { correctWord: question.text }),
-    hearable: block.closed && speechOf(question) !== undefined,
+    hearable: hearable(block),
   }
 }
 
@@ -148,6 +148,8 @@ export interface MultipleChoiceOption {
 export interface MultipleChoiceView {
   text: string
   options: MultipleChoiceOption[]
+  /** The Question can be read aloud: only once scored, and only with a `speak_text`. */
+  hearable: boolean
 }
 
 /** The multiple-choice Block on screen as the Participant sees it. */
@@ -163,6 +165,7 @@ export function multipleChoiceView(block: Block): MultipleChoiceView {
       const marked = block.closed && (shown.chosen || question.answer.includes(shown.text))
       return marked ? { ...shown, mark: right[option] ? 'right' : 'wrong' } : shown
     }),
+    hearable: hearable(block),
   }
 }
 
@@ -190,6 +193,15 @@ export interface Speech {
 /** How a Question's text is read aloud, or nothing if it has no `speak_text`. Its answer is never read. */
 export const speechOf = ({ text, speak_text }: PracticeQuestion): Speech | undefined =>
   speak_text ? { text, lang: speak_text } : undefined
+
+/**
+ * A spelling or multiple-choice Block is read aloud only once it is scored, as hearing it earlier would give its
+ * answer away; it is then read after its Block sound, whether answered right or wrong.
+ */
+export const heardOnceScored = (block: Block) => block.type === 'spelling' || block.type === 'multiple-choice'
+
+/** The Question of a Block heard once scored can be read aloud now. */
+const hearable = (block: Block) => block.closed && speechOf(block.questions[0].question) !== undefined
 
 export interface PracticeState {
   /** Every Block of the Practice, in the order they are shown. */
@@ -252,13 +264,12 @@ function announce(state: PracticeState): PracticeState {
 
 /**
  * Reads a Question of the current Block aloud on request, even once the Block is scored; without a
- * `speak_text` nothing is read, and a spelling word only once it is scored. Each request is a new speech,
+ * `speak_text` nothing is read, and a spelling or multiple-choice Question only once it is scored. Each request is a new speech,
  * so the same text can be heard again.
  */
 export function readAloud(state: PracticeState, questionIndex: number): PracticeState {
   const block = currentBlock(state)
-  // Hearing a spelling word would give its spelling away.
-  if (block.type === 'spelling' && !block.closed) return state
+  if (heardOnceScored(block) && !block.closed) return state
   const speech = speechOf(block.questions[questionIndex].question)
   return speech ? { ...state, speech } : state
 }
@@ -363,8 +374,7 @@ function scoreCurrentBlock(state: PracticeState, { submitted }: { submitted: boo
   const questions = block.questions.map((entry, i) => ({ ...entry, correct: correctOf(entry, i) }))
   const allCorrect = questions.every((entry) => entry.correct)
   const scored = { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
-  // A spelling word is heard once it is scored, whether right or wrong, so the Participant learns how it is said.
-  const speech = block.type === 'spelling' ? speechOf(block.questions[0].question) : undefined
+  const speech = heardOnceScored(block) ? speechOf(block.questions[0].question) : undefined
   return speech ? { ...scored, speech } : scored
 }
 
