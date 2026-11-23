@@ -132,7 +132,7 @@ export default function Practice() {
             onReadAloud={() => practice.readAloud(0)}
           />
         ) : block.type === 'multiple-choice' && snapshot.multipleChoice ? (
-          <MultipleChoice multipleChoice={snapshot.multipleChoice} onToggle={practice.toggle} />
+          <MultipleChoice multipleChoice={snapshot.multipleChoice} closed={block.closed} onToggle={practice.toggle} />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
@@ -299,12 +299,16 @@ function WordMatching({ block, selection, onTap }: { block: Block; selection?: S
 /**
  * A multiple-choice Block: the question and its options in a column. A tap chooses an option or lets go of it;
  * „Kész” scores the Block. Once scored, a right answer chosen turns green, a wrong option chosen or a right answer
- * missed turns red.
+ * missed turns red, and the rest fade. Each option takes the full width; a long one wraps into a taller tile.
  */
-function MultipleChoice({ multipleChoice, onToggle }: { multipleChoice: MultipleChoiceView; onToggle: (option: number) => void }) {
+function MultipleChoice({ multipleChoice, closed, onToggle }: {
+  multipleChoice: MultipleChoiceView
+  closed: boolean
+  onToggle: (option: number) => void
+}) {
   return (
     <Stack spacing={1.25}>
-      <Typography variant="h3" component="p" sx={{ fontWeight: 500 }}>
+      <Typography variant="h3" component="p" sx={{ fontWeight: 500, mb: 0.5, overflowWrap: 'anywhere' }}>
         {multipleChoice.text}
       </Typography>
       {multipleChoice.options.map((option, i) => (
@@ -313,6 +317,7 @@ function MultipleChoice({ multipleChoice, onToggle }: { multipleChoice: Multiple
           text={option.text}
           tone={option.mark === 'right' ? 'success' : option.mark === 'wrong' ? 'error' : undefined}
           selected={option.chosen && !option.mark}
+          faded={closed && !option.mark}
           onClick={() => onToggle(i)}
         />
       ))}
@@ -320,12 +325,16 @@ function MultipleChoice({ multipleChoice, onToggle }: { multipleChoice: Multiple
   )
 }
 
-/** One word or meaning: a paired one shows its pair's number in a faded green, a scored one green or red. */
-function Tile({ text, pairNumber, tone, selected, onClick }: {
+/**
+ * One word, meaning or option: a paired one shows its pair's number in a faded green, a scored one green or red.
+ * A faded one is left out of the scoring and can no longer be tapped.
+ */
+function Tile({ text, pairNumber, tone, selected, faded = false, onClick }: {
   text: string
   pairNumber?: number
   tone?: 'success' | 'error'
   selected: boolean
+  faded?: boolean
   onClick: () => void
 }) {
   const theme = useTheme()
@@ -349,8 +358,9 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
         border: `1.5px solid ${color}`,
         bgcolor: tone ? theme.palette[tone].soft : selected ? primary.soft : paired ? alpha(primary.soft, 0.5) : 'background.paper',
         boxShadow: selected ? `0 0 0 3px ${primary.soft}` : '0 1px 2px rgba(16,24,40,0.06)',
-        transition: 'background-color 120ms, border-color 120ms, box-shadow 120ms',
-        ...(tone && { pointerEvents: 'none' }),
+        transition: 'background-color 120ms, border-color 120ms, box-shadow 120ms, opacity 120ms',
+        ...((tone || faded) && { pointerEvents: 'none' }),
+        ...(faded && { opacity: 0.5 }),
       }}
     >
       {paired && (
@@ -372,7 +382,7 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
           {pairNumber}
         </Box>
       )}
-      <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{text}</Typography>
+      <Typography sx={{ minWidth: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{text}</Typography>
     </ButtonBase>
   )
 }
