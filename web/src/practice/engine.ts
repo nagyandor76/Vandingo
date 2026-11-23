@@ -4,7 +4,7 @@
 export type QuestionType = 'true-false' | 'word-matching' | 'spelling' | 'multiple-choice' | 'ordered'
 
 /** The question types a Practice can present, with the number of Questions in one whole Block. */
-const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5, spelling: 1 }
+const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5, spelling: 1, 'multiple-choice': 1 }
 
 /**
  * The playable types a Practice draws from, given a range's Question count per type: a type is used
@@ -56,6 +56,8 @@ export interface BlockQuestion {
   placed?: (number | undefined)[]
   /** Spelling: the letters (by their place in the word) holding a tile, in the order the tiles were placed. */
   placingOrder?: number[]
+  /** Multiple-choice: the indices in `options` of the chosen options. */
+  chosen?: number[]
 }
 
 /** Same-type Questions shown and scored together. */
@@ -73,6 +75,8 @@ export interface Block {
   meaningOrder?: number[]
   /** Spelling: the lower-case letters on the tiles, in the order they are shown: the word's letters and two extras. */
   tiles?: string[]
+  /** Multiple-choice: the indices in the Question's `options`, in the order the options are shown. */
+  optionOrder?: number[]
 }
 
 /** One place in the answer line of a spelling word: a character given in advance, or a letter to place. */
@@ -126,6 +130,39 @@ export function spellingView(block: Block): SpellingView {
     tiles: tiles.map((letter, i) => ({ letter, used: used.has(i) })),
     ...(block.closed && { correctWord: question.text }),
     hearable: block.closed && speechOf(question) !== undefined,
+  }
+}
+
+/** One option of a multiple-choice Block as the Participant sees it. */
+export interface MultipleChoiceOption {
+  text: string
+  chosen: boolean
+  /**
+   * Set once the Block is scored, on a right answer and on a chosen option: `right` for a right answer chosen,
+   * `wrong` for a wrong option chosen or a right answer missed.
+   */
+  mark?: 'right' | 'wrong'
+}
+
+/** A multiple-choice Block as the Participant sees it: the question and its options in the order they are shown. */
+export interface MultipleChoiceView {
+  text: string
+  options: MultipleChoiceOption[]
+}
+
+/** The multiple-choice Block on screen as the Participant sees it. */
+export function multipleChoiceView(block: Block): MultipleChoiceView {
+  const [entry] = block.questions
+  const { question, chosen = [] } = entry
+  const options = question.options ?? []
+  const right = optionsRight(entry)
+  return {
+    text: question.text,
+    options: block.optionOrder!.map((option): MultipleChoiceOption => {
+      const shown = { text: options[option], chosen: chosen.includes(option) }
+      const marked = block.closed && (shown.chosen || question.answer.includes(shown.text))
+      return marked ? { ...shown, mark: right[option] ? 'right' : 'wrong' } : shown
+    }),
   }
 }
 
@@ -284,13 +321,14 @@ const isFullyPaired = (block: Block) => block.questions.every((entry) => entry.p
 
 /**
  * Closes and scores the current Block; after the last one the Practice has its Result.
- * A word-matching Block closes only once every word is paired, a spelling Block once every letter is placed.
+ * A word-matching Block closes only once every word is paired, a spelling Block once every letter is placed;
+ * a true–false or multiple-choice Block whenever the Participant is done („Kész”).
  */
 export function closeBlock(state: PracticeState): PracticeState {
   const block = currentBlock(state)
   if (block.closed) return state
   if ((block.type === 'word-matching' && !isFullyPaired(block)) || (block.type === 'spelling' && !isFullySpelled(block))) return state
-  const closed = scoreCurrentBlock(state)
+  const closed = scoreCurrentBlock(state, { submitted: true })
   if (state.blockIndex < state.blocks.length - 1) return closed
   const elapsedSeconds = Math.min(Math.round(elapsedMs(state) / 1000), state.timeLimitSeconds)
   return { ...closed, result: score(closed, elapsedSeconds) }
@@ -304,17 +342,22 @@ export function tick(state: PracticeState): PracticeState {
   if (state.result) return state
   const remainingSeconds = Math.max(0, Math.ceil(state.timeLimitSeconds - elapsedMs(state) / 1000))
   if (remainingSeconds > 0) return remainingSeconds === state.remainingSeconds ? state : { ...state, remainingSeconds }
-  const closed = currentBlock(state).closed ? state : scoreCurrentBlock(state)
+  const closed = currentBlock(state).closed ? state : scoreCurrentBlock(state, { submitted: false })
   return { ...closed, remainingSeconds, result: score(closed, state.timeLimitSeconds) }
 }
 
 const elapsedMs = (state: PracticeState) => state.clock() - state.startedAt
 
-function scoreCurrentBlock(state: PracticeState): PracticeState {
+/**
+ * Scores the current Block: `submitted` by the Participant, or cut short as time ran out. A multiple-choice Question
+ * not submitted is wrong, whatever is chosen.
+ */
+function scoreCurrentBlock(state: PracticeState, { submitted }: { submitted: boolean }): PracticeState {
   const block = currentBlock(state)
   const correctOf = (entry: BlockQuestion, i: number) => {
     if (block.type === 'word-matching') return entry.paired === i
     if (block.type === 'spelling') return lettersRight(entry, block.tiles!).every(Boolean)
+    if (block.type === 'multiple-choice') return submitted && optionsRight(entry).every(Boolean)
     return entry.given === entry.question.answer[0]
   }
   const questions = block.questions.map((entry, i) => ({ ...entry, correct: correctOf(entry, i) }))
@@ -403,6 +446,7 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
       const block: Block = { type, questions: ofType.slice(offset, offset + count).map((question) => ({ question })), closed: false }
       if (type === 'word-matching') block.meaningOrder = shuffledApart([...block.questions.keys()], random)
       if (type === 'spelling') block.tiles = dealTiles(block.questions[0].question.text, random)
+      if (type === 'multiple-choice') block.optionOrder = shuffle([...(block.questions[0].question.options ?? []).keys()], random)
       offset += count
       return block
     })
@@ -418,6 +462,21 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
     total -= block.questions.length
   }
   return blocks
+}
+
+/**
+ * Chooses an option of the current multiple-choice Block, given by its place among the options shown, or lets go
+ * of it if it is chosen; a scored Block ignores it.
+ */
+export function toggle(state: PracticeState, shown: number): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'multiple-choice') return state
+  const option = block.optionOrder![shown]
+  if (option === undefined) return state
+  const [entry] = block.questions
+  const chosen = entry.chosen ?? []
+  const questions = [{ ...entry, chosen: chosen.includes(option) ? chosen.filter((o) => o !== option) : [...chosen, option] }]
+  return withCurrentBlock(state, { ...block, questions })
 }
 
 /**
@@ -470,6 +529,10 @@ function takeBackLetter(state: PracticeState, letter: number): PracticeState {
   ]
   return withCurrentBlock(state, { ...block, questions })
 }
+
+/** For each option of a multiple-choice Question in turn, whether it is chosen exactly if it is a right answer. */
+const optionsRight = ({ question, chosen = [] }: BlockQuestion) =>
+  (question.options ?? []).map((option, i) => chosen.includes(i) === question.answer.includes(option))
 
 /** Every letter slot of the spelling word holds a tile; `placed` has one entry per letter once a tile is placed. */
 const isFullySpelled = (block: Block) => {

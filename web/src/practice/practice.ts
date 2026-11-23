@@ -8,6 +8,7 @@ import {
   closeBlock,
   currentBlock,
   isPassed,
+  multipleChoiceView,
   next,
   place,
   readAloud,
@@ -17,7 +18,9 @@ import {
   takeBackLast,
   tap,
   tick,
+  toggle,
   type Block,
+  type MultipleChoiceView,
   type PracticeQuestion,
   type PracticeResult,
   type PracticeState,
@@ -29,7 +32,7 @@ import {
 } from './engine.ts'
 
 // What a screen needs to render a Practice, so it never reaches into the engine itself.
-export type { Block, BlockQuestion, PracticeResult, Selection, Side, SpellingSlot, SpellingView, TrueFalseAnswer } from './engine.ts'
+export type { Block, BlockQuestion, MultipleChoiceOption, MultipleChoiceView, PracticeResult, Selection, Side, SpellingSlot, SpellingView, TrueFalseAnswer } from './engine.ts'
 
 /** How often the countdown follows the clock. */
 const tickMs = 250
@@ -88,6 +91,8 @@ export type PracticeSnapshot =
       selection?: Selection
       /** A spelling Block: the word's meaning, its answer line and its tiles. */
       spelling?: SpellingView
+      /** A multiple-choice Block: the question and its options, in the order they are shown. */
+      multipleChoice?: MultipleChoiceView
       /** The Practice has its Result: the last Block is scored, or time ran out. */
       resultReady: boolean
       timedOut: boolean
@@ -103,6 +108,8 @@ export interface Practice {
   answer(questionIndex: number, value: TrueFalseAnswer): void
   /** Taps a word or a meaning of the current word-matching Block, by its Question's index in the Block. */
   tap(side: Side, index: number): void
+  /** Chooses an option of the current multiple-choice Block, by its place among the options shown, or lets go of it. */
+  toggle(option: number): void
   /** Places a tile of the current spelling Block, by its index, in the first empty slot of the word. */
   place(tile: number): void
   /** Takes the last placed letter of the current spelling Block back to its tile. */
@@ -111,7 +118,7 @@ export interface Practice {
   takeBack(place: number): void
   /** Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word only once scored. */
   readAloud(questionIndex: number): void
-  /** Closes and scores the current true–false Block. */
+  /** „Kész”: closes and scores the current true–false or multiple-choice Block. */
   close(): void
   /** Moves on from a scored Block: to the next one, or to the summary once there is a Result. */
   next(): void
@@ -149,6 +156,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
       correctInBlock: block.questions.filter((entry) => entry.correct).length,
       selection: state.selection,
       ...(block.type === 'spelling' && { spelling: spellingView(block) }),
+      ...(block.type === 'multiple-choice' && { multipleChoice: multipleChoiceView(block) }),
       resultReady: state.result !== undefined,
       timedOut: state.result !== undefined && state.remainingSeconds === 0,
     }
@@ -276,6 +284,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     getSnapshot: () => snapshot,
     answer: (questionIndex, value) => state && update(answer(state, questionIndex, value)),
     tap: (side, index) => state && update(tap(state, side, index)),
+    toggle: (option) => state && update(toggle(state, option)),
     place: (tile) => state && update(place(state, tile)),
     takeBackLast: () => state && update(takeBackLast(state)),
     takeBack: (place) => state && update(takeBack(state, place)),

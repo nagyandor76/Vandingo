@@ -7,6 +7,7 @@ import {
   createPractice,
   type Block,
   type BlockQuestion,
+  type MultipleChoiceView,
   type Practice as PracticeModule,
   type PracticeResult,
   type PracticeSnapshot,
@@ -130,6 +131,8 @@ export default function Practice() {
             onTakeBack={practice.takeBack}
             onReadAloud={() => practice.readAloud(0)}
           />
+        ) : block.type === 'multiple-choice' && snapshot.multipleChoice ? (
+          <MultipleChoice multipleChoice={snapshot.multipleChoice} onToggle={practice.toggle} />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
@@ -193,6 +196,7 @@ const titles: Partial<Record<Block['type'], string>> = {
   'true-false': 'Igaz vagy hamis?',
   'word-matching': 'Párosítsd össze!',
   spelling: 'Rakd ki angolul!',
+  'multiple-choice': 'Válaszd ki a helyeseket!',
 }
 
 /** What to do in a Block that is scored by itself, without a „Kész” button. */
@@ -288,6 +292,30 @@ function WordMatching({ block, selection, onTap }: { block: Block; selection?: S
       <Stack spacing={1.25} sx={{ flex: 1, minWidth: 0 }}>
         {block.meaningOrder!.map((meaning) => tile('meaning', meaning, block.questions[meaning].question.answer[0], wordOf(meaning)))}
       </Stack>
+    </Stack>
+  )
+}
+
+/**
+ * A multiple-choice Block: the question and its options in a column. A tap chooses an option or lets go of it;
+ * „Kész” scores the Block. Once scored, a right answer chosen turns green, a wrong option chosen or a right answer
+ * missed turns red.
+ */
+function MultipleChoice({ multipleChoice, onToggle }: { multipleChoice: MultipleChoiceView; onToggle: (option: number) => void }) {
+  return (
+    <Stack spacing={1.25}>
+      <Typography variant="h3" component="p" sx={{ fontWeight: 500 }}>
+        {multipleChoice.text}
+      </Typography>
+      {multipleChoice.options.map((option, i) => (
+        <Tile
+          key={i}
+          text={option.text}
+          tone={option.mark === 'right' ? 'success' : option.mark === 'wrong' ? 'error' : undefined}
+          selected={option.chosen && !option.mark}
+          onClick={() => onToggle(i)}
+        />
+      ))}
     </Stack>
   )
 }

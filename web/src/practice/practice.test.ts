@@ -816,3 +816,128 @@ describe('a spelling Block', () => {
     })
   })
 })
+
+describe('a multiple-choice Block', () => {
+  const choiceQuestion = (text: string, options: string[], answer: string[], speak_text?: string): PracticeQuestion => ({
+    type: 'multiple-choice',
+    text,
+    options,
+    answer,
+    time: 20,
+    ...(speak_text && { speak_text }),
+  })
+  const cities = choiceQuestion('Melyik város?', ['Budapest', 'Duna', 'Szeged', 'Mátra'], ['Budapest', 'Szeged'])
+
+  /** The running snapshot's multiple-choice Block, as the Participant sees it. */
+  const multipleChoiceOf = (p: Practice) => {
+    const snapshot = p.getSnapshot()
+    if (snapshot.phase !== 'running' || !snapshot.multipleChoice) throw new Error('no multiple-choice Block on screen')
+    return snapshot.multipleChoice
+  }
+  const texts = (p: Practice) => multipleChoiceOf(p).options.map((option) => option.text)
+  /** Toggles the options with these texts. */
+  const choose = (p: Practice, ...chosen: string[]) => {
+    for (const text of chosen) p.toggle(texts(p).indexOf(text))
+  }
+
+  it('is playable with a single Question, showing its text and its options shuffled, none chosen', async () => {
+    // Fisher–Yates over 4 options draws 3 times: swap the last with the first, then leave the rest in place.
+    const draws = [0, 0.999999, 0.999999]
+    const p = open(memoryData({ questions: [cities] }).data, undefined, () => draws.shift() ?? 0.5)
+    await settle()
+
+    expect(multipleChoiceOf(p)).toEqual({
+      text: 'Melyik város?',
+      options: [
+        { text: 'Mátra', chosen: false },
+        { text: 'Duna', chosen: false },
+        { text: 'Szeged', chosen: false },
+        { text: 'Budapest', chosen: false },
+      ],
+    })
+  })
+
+  it('chooses any number of options with a tap, and lets go of a chosen one with another', async () => {
+    const p = open(memoryData({ questions: [cities] }).data)
+    await settle()
+
+    choose(p, 'Budapest', 'Duna', 'Szeged', 'Duna')
+
+    const chosen = multipleChoiceOf(p).options.filter((option) => option.chosen).map((option) => option.text)
+    expect(chosen.sort()).toEqual(['Budapest', 'Szeged'])
+    expect(p.getSnapshot()).toMatchObject({ block: { closed: false } })
+  })
+
+  it('is scored right on „Kész” only with every right option chosen and nothing else, with one sound', async () => {
+    const tries = [
+      { chosen: ['Budapest', 'Szeged'], right: true },
+      { chosen: ['Szeged', 'Budapest'], right: true },
+      { chosen: ['Budapest'], right: false },
+      { chosen: ['Budapest', 'Szeged', 'Duna'], right: false },
+      { chosen: [], right: false },
+    ]
+    for (const { chosen, right } of tries) {
+      const { audio, calls } = recordingAudio()
+      const { data, saved } = memoryData({ questions: [cities] })
+      const p = open(data, audio)
+      await settle()
+
+      choose(p, ...chosen)
+      p.close()
+      p.close()
+      await settle()
+
+      expect(p.getSnapshot()).toMatchObject({ block: { closed: true, allCorrect: right }, correctInBlock: right ? 1 : 0 })
+      expect(calls).toEqual(['stop', `sound ${right ? 'correct' : 'wrong'}`])
+      expect(saved).toMatchObject([{ total: 1, correct: right ? 1 : 0, scorePercent: right ? 100 : 0 }])
+      p.dispose()
+    }
+  })
+
+  it('once scored, marks the right options green and the wrongly chosen or missed ones red, and ignores taps', async () => {
+    const p = open(memoryData({ questions: [cities] }).data)
+    await settle()
+    choose(p, 'Budapest', 'Duna')
+
+    p.close()
+    choose(p, 'Szeged', 'Duna')
+
+    const byText = Object.fromEntries(multipleChoiceOf(p).options.map(({ text, ...rest }) => [text, rest]))
+    expect(byText).toEqual({
+      Budapest: { chosen: true, mark: 'right' },
+      Duna: { chosen: true, mark: 'wrong' },
+      Szeged: { chosen: false, mark: 'wrong' },
+      Mátra: { chosen: false },
+    })
+  })
+
+  it('is wrong when time runs out before „Kész”, even with the right options chosen', async () => {
+    const { data, saved } = memoryData({ questions: [cities] })
+    const p = open(data)
+    await settle()
+    choose(p, 'Budapest', 'Szeged')
+
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(p.getSnapshot()).toMatchObject({ timedOut: true, correctInBlock: 0, block: { closed: true, allCorrect: false } })
+    expect(saved).toMatchObject([{ total: 1, correct: 0, scorePercent: 0 }])
+  })
+
+  it('comes one Question per Block, each once, mixed with the Blocks of other types', async () => {
+    const towns = choiceQuestion('Melyik folyó?', ['Duna', 'Pest'], ['Duna'])
+    const p = open(memoryData({ questions: [...statements(3), cities, towns] }).data, undefined, Math.random)
+    await settle()
+
+    expect(p.getSnapshot()).toMatchObject({ blockCount: 3 })
+    const shown: string[] = []
+    for (let i = 0; i < 3; i++) {
+      const snapshot = p.getSnapshot()
+      if (snapshot.phase !== 'running') throw new Error('not running')
+      shown.push(snapshot.block.type === 'multiple-choice' ? multipleChoiceOf(p).text : snapshot.block.type)
+      expect(snapshot.block.questions).toHaveLength(snapshot.block.type === 'multiple-choice' ? 1 : 3)
+      p.close()
+      p.next()
+    }
+    expect(shown.sort()).toEqual(['Melyik folyó?', 'Melyik város?', 'true-false'])
+  })
+})
