@@ -963,24 +963,17 @@ describe('a multiple-choice Block', () => {
   describe('reading aloud', () => {
     const spoken = choiceQuestion('Which city?', ['Budapest', 'Duna'], ['Budapest'], 'en-GB')
 
-    it('reads nothing before „Kész”, not even when asked, then the Question after the Block sound, and again on request', async () => {
-      const { audio, calls, endSound, endReading } = recordingAudio()
-      const p = open(memoryData({ questions: [spoken] }).data, audio)
+    it('reads the Question once as its Block appears, first or moved on to', async () => {
+      const { audio, calls, endSound } = recordingAudio()
+      const p = open(memoryData({ questions: [spoken, { ...spoken, text: 'Which river?' }] }).data, audio)
       await settle()
-
-      p.readAloud(0)
-      choose(p, 'Duna')
-      expect(calls).toEqual([])
-      expect(multipleChoiceOf(p).hearable).toBe(false)
+      expect(calls).toEqual(['speak Which city?'])
 
       p.close()
-      expect(calls).toEqual(['stop', 'sound wrong'])
       await endSound()
-      await endReading()
-      p.readAloud(0)
+      p.next()
 
-      expect(calls).toEqual(['stop', 'sound wrong', 'speak Which city?', 'speak Which city?'])
-      expect(multipleChoiceOf(p).hearable).toBe(true)
+      expect(calls).toEqual(['speak Which city?', 'stop', 'sound wrong', 'speak Which river?'])
     })
 
     it('only plays the Block sound for a Question without a reading', async () => {
@@ -996,18 +989,52 @@ describe('a multiple-choice Block', () => {
       expect(multipleChoiceOf(p).hearable).toBe(false)
     })
 
-    it('with auto_advance, moves on 2 seconds after the reading ends, or after scoring without a reading', async () => {
-      const { audio, endSound, endReading } = recordingAudio()
+    it('reads an option in the language of `speak_answer` as it is chosen, never as it is let go of', async () => {
+      const { audio, calls } = recordingAudio()
+      const p = open(memoryData({ questions: [{ ...cities, speak_answer: 'hu-HU' }] }).data, audio)
+      await settle()
+
+      choose(p, 'Szeged', 'Duna', 'Szeged')
+
+      expect(calls).toEqual(['speak Szeged', 'speak Duna'])
+    })
+
+    it('reads no option without a `speak_answer`, nor once the Block is scored', async () => {
+      const { audio, calls, endSound } = recordingAudio()
+      const p = open(memoryData({ questions: [cities, { ...cities, speak_answer: 'hu-HU' }] }).data, audio)
+      await settle()
+
+      choose(p, 'Szeged')
+      p.close()
+      await endSound()
+      choose(p, 'Duna')
+
+      expect(calls).toEqual(['stop', 'sound wrong'])
+    })
+
+    it('reads the Question again when asked, before „Kész” too, but reads nothing after the Block sound', async () => {
+      const { audio, calls, endSound, endReading } = recordingAudio()
+      const p = open(memoryData({ questions: [spoken] }).data, audio)
+      await settle()
+      expect(multipleChoiceOf(p).hearable).toBe(true)
+
+      p.readAloud(0)
+      await endReading()
+      await endReading()
+      p.close()
+      await endSound()
+      p.readAloud(0)
+
+      expect(calls).toEqual(['speak Which city?', 'speak Which city?', 'stop', 'sound wrong', 'speak Which city?'])
+    })
+
+    it('with auto_advance, moves on 2 seconds after scoring, whether or not the Question has a reading', async () => {
+      const { audio } = recordingAudio()
       const questions = [spoken, cities, choiceQuestion('Melyik folyó?', ['Duna', 'Pest'], ['Duna'])]
       const p = open(memoryData({ subjects: [{ ...history, auto_advance: true }], questions }).data, audio)
       await settle()
 
       p.close()
-      await vi.advanceTimersByTimeAsync(3000)
-      await endSound()
-      await vi.advanceTimersByTimeAsync(3000)
-      expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
-      await endReading()
       await vi.advanceTimersByTimeAsync(1900)
       expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
       await vi.advanceTimersByTimeAsync(100)
@@ -1018,34 +1045,17 @@ describe('a multiple-choice Block', () => {
       expect(p.getSnapshot()).toMatchObject({ blockIndex: 2 })
     })
 
-    it('with auto_advance, waits 2 seconds after the end of a reading asked for again', async () => {
-      const { audio, endSound, endReading } = recordingAudio()
-      const p = open(memoryData({ subjects: [{ ...history, auto_advance: true }], questions: [spoken, cities] }).data, audio)
-      await settle()
-      p.close()
-      await endSound()
-
-      p.readAloud(0)
-      await endReading() // the first reading, cut off by the second
-      await vi.advanceTimersByTimeAsync(3000)
-      expect(p.getSnapshot()).toMatchObject({ blockIndex: 0 })
-      await endReading()
-      await vi.advanceTimersByTimeAsync(2000)
-
-      expect(p.getSnapshot()).toMatchObject({ blockIndex: 1 })
-    })
-
-    it('with auto_advance, stays on the Question when time runs out, and reads it after the sound', async () => {
+    it('with auto_advance, stays on the Question when time runs out, with only the Block sound', async () => {
       const { audio, calls, endSound, endReading } = recordingAudio()
       const p = open(memoryData({ subjects: [{ ...history, auto_advance: true }], questions: [{ ...spoken, time: 1 }, { ...cities, time: 1 }] }).data, audio)
       await settle()
 
       await vi.advanceTimersByTimeAsync(2000)
-      await endSound()
       await endReading()
+      await endSound()
       await vi.advanceTimersByTimeAsync(4000)
 
-      expect(calls).toEqual(['stop', 'sound wrong', 'speak Which city?'])
+      expect(calls).toEqual(['speak Which city?', 'stop', 'sound wrong'])
       expect(p.getSnapshot()).toMatchObject({ phase: 'running', blockIndex: 0, timedOut: true })
     })
   })

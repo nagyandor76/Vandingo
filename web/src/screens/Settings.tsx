@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
 import { createSubject, exportUrl, fetchSubjects, saveSubjectSettings, takeOverFromSource, type SeedItem, type Subject } from '../api.ts'
+import { readingsOn, setReadingsOn } from '../readings.ts'
 import Screen from './Screen.tsx'
 import ZipUpload from './ZipUpload.tsx'
 
-/** Subjects' settings, and creating a new Subject. */
+/** This device's settings, Subjects' settings, and creating a new Subject. */
 export default function Settings() {
   const [subjects, setSubjects] = useState<Subject[]>()
   const [error, setError] = useState(false)
@@ -17,6 +18,11 @@ export default function Settings() {
   return (
     <Screen title="Beállítások">
       <Typography variant="h3" component="h2">
+        Ezen az eszközön
+      </Typography>
+      <DeviceSettings />
+
+      <Typography variant="h3" component="h2" sx={{ pt: 1 }}>
         Tantárgyak
       </Typography>
       {error && <Alert severity="error">Nem sikerült betölteni a tantárgyakat.</Alert>}
@@ -53,6 +59,34 @@ export default function Settings() {
       </Typography>
       <TakeOver onDone={load} />
     </Screen>
+  )
+}
+
+/** What is set for this device only, kept by the browser: it applies at once, with no saving. */
+function DeviceSettings() {
+  const [readings, setReadings] = useState(readingsOn)
+
+  return (
+    <Paper sx={{ p: 2 }}>
+      <Stack spacing={1}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={readings}
+              onChange={(event) => {
+                setReadingsOn(event.target.checked)
+                setReadings(readingsOn())
+              }}
+            />
+          }
+          label="Felolvasás ezen az eszközön"
+        />
+        <Typography variant="caption" color="text.secondary">
+          Kikapcsolva a kérdések és válaszok nem hangzanak el, a jó és rossz válasz hangja viszont szól. Csak erre
+          az eszközre vonatkozik.
+        </Typography>
+      </Stack>
+    </Paper>
   )
 }
 

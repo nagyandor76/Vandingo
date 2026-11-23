@@ -304,7 +304,7 @@ function WordMatching({ block, selection, onTap }: { block: Block; selection?: S
  * A multiple-choice Block: the question and its options in a column. A tap chooses an option or lets go of it;
  * a chosen one carries a ✓. „Kész” scores the Block. Once scored, a right answer chosen turns green, a wrong option
  * chosen or a right answer missed turns red, and the rest fade; the ✓ stays, telling a wrong choice from a miss.
- * Each option takes the full width; a long one wraps into a taller tile. Once scored, 🔊 reads the question again
+ * Each option takes the full width; a long one wraps into a taller tile. 🔊 reads the question again
  * if it has a reading.
  */
 function MultipleChoice({ multipleChoice, onToggle, onReadAloud }: {

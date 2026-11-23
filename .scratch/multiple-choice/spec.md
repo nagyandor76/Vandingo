@@ -1,10 +1,12 @@
 ---
-status: done
+status: ready-for-agent
 ---
 
 # Multiple-choice kérdéstípus
 
 Forrás: a `/grill-with-docs` és `/to-spec` beszélgetés (2026-11-22), [GLOSSARY.md](../../GLOSSARY.md) (fogalmak), [Spelling spec](../spelling/spec.md) (architekturális párhuzamok).
+
+**Módosítás (2026-11-23):** a többválasztásos hangok időzítése megváltozott. A kérdés a megjelenésekor hangzik el, egy válasz a kijelölésekor, kiértékelés után pedig csak a Block hangja szól. Emellett a felolvasások eszközönként kikapcsolhatók. Érintett részek: a 16–18. és a 29–31. user story, valamint a „Felolvasás”, „Felolvasás kapcsoló” és „Testing Decisions” rész. Ticketek: [05](issues/05-hang-megjeleneskor-es-kijeloleskor.md), [06](issues/06-felolvasas-kapcsolo.md).
 
 ## Problem Statement
 
@@ -12,7 +14,7 @@ Az alkalmazás jelenleg három kérdéstípust támogat: igaz–hamis, szópáro
 
 ## Solution
 
-Új, játszható Question type: a **Multiple-choice** (*Többválasztásos*). A Participant a kérdést és több válaszlehetőséget lát. Rákattintásra a válaszok zöldek lesznek (kijelölve). A "Kész" gombra kattintva a hibás válaszok pirosak lesznek, és a Blokk kiértékelődik: helyes = mind a helyes válaszok kijelölve és semmi helytelen, egyébként 0%. Zöld–piros visszajelzés és felolvasás után automatikus továbblépés — ugyanúgy, mint az igaz–hamis és szópárosító.
+Új, játszható Question type: a **Multiple-choice** (*Többválasztásos*). A Participant a kérdést és több válaszlehetőséget lát. Rákattintásra a válaszok zöldek lesznek (kijelölve). A "Kész" gombra kattintva a hibás válaszok pirosak lesznek, és a Blokk kiértékelődik: helyes = mind a helyes válaszok kijelölve és semmi helytelen, egyébként 0%. A kérdés megjelenéskor, a kijelölt válasz kijelöléskor hangzik el (ha a Questionnek van `speak_text`-je, illetve `speak_answer`-e). Zöld–piros visszajelzés és a Block hangja után automatikus továbblépés — ugyanúgy, mint az igaz–hamis és szópárosító.
 
 ## User Stories
 
@@ -31,9 +33,9 @@ Az alkalmazás jelenleg három kérdéstípust támogat: igaz–hamis, szópáro
 13. Mint Participant, egy Blocknál egy Multiple-choice kérdés jöjjön (mint a betűzés), hogy egy kérdés egy kiértékelésnek feleljen meg.
 14. Mint Participant, helyes válasz után a jó hangot akarom hallani, hogy tudjam, sikerült.
 15. Mint Participant, helytelen válasz után a rossz hangot akarom hallani, hogy tudjam, nem sikerült.
-16. Mint Participant, a hang után hallani akarom a kérdést (ha van `speak_text`), hogy megtanuljam az eredményt.
-17. Mint Participant, a válaszom kiértékelése előtt semmi ne hangozzék el, hogy a felolvasás ne árulja el a választ.
-18. Mint Participant, bekapcsolt auto-advance mellett a következő Block 2 másodperccel a felolvasás vége után jöjjön (vagy a pontozás után, ha nincs felolvasás), hogy a felolvasás ne szakadjon félbe.
+16. Mint Participant, a kérdés megjelenésekor hallani akarom a kérdésszöveget (ha van `speak_text`), hogy olvasás nélkül is értsem, mit kérdez.
+17. Mint Participant, egy válaszlehetőség kijelölésekor hallani akarom annak szövegét (ha van `speak_answer`), hogy halljam, mit választottam. A kijelölés feloldásakor nem szól semmi.
+18. Mint Participant, bekapcsolt auto-advance mellett a következő Block 2 másodperccel a Block hangja után jöjjön, mert kiértékelés után nincs több felolvasás.
 19. Mint Participant, a kérdések a másik típusokkal (igaz–hamis, szópárosító, betűzés) vegyesen jöjjenek az ugyanazon Difficulty-tartományban, hogy a tartomány mindent gyakoroltasson, ami benne van.
 20. Mint Participant, egy Practice-ben minden Multiple-choice kérdés csak egyszer jöjjön, hogy egy alkalommal ne kelljen kétszer ugyanazt a kérdést megválaszolnom.
 21. Mint szülő, a szerkesztőben "Többválasztásos" típust akarok választani egy Questionhöz, hogy ilyen Quizeket írhassak.
@@ -44,6 +46,9 @@ Az alkalmazás jelenleg három kérdéstípust támogat: igaz–hamis, szópáro
 26. Mint szülő, a mentés hibát adjon, ha az `answer` üres vagy hiányzik, hogy minden kérdésnek legyen helyes válasza.
 27. Mint szülő, a mentés hibát adjon, ha egy `answer`-beli helyes válasz nincs az `options` felsorolásában (vagyis a szerző elírta), hogy az összes helyes válasz a lehetőségek között legyen.
 28. Mint szülő, a Quiz-lista típusonkénti kérdésszámai a Multiple-choice-t is tartalmazzák, hogy a Practice indítóképernyő tudja, egy tartomány gyakorolható-e.
+29. Mint szülő, a Beállításokban egy kapcsolóval ki akarom kapcsolni a felolvasásokat egy eszközön, hogy például a tanórán a telefon csak jelzőhangot adjon.
+30. Mint Participant, kikapcsolt felolvasásnál is hallani akarom a jó és a rossz jelzőhangot, hogy tudjam, sikerült-e.
+31. Mint szülő, a kapcsoló minden kérdéstípus felolvasására vonatkozzon, és csak azon az eszközön, ahol beállítottam, hogy a többi családtag eszközét ne némítsa.
 
 ## Implementation Decisions
 
@@ -54,7 +59,13 @@ Az alkalmazás jelenleg három kérdéstípust támogat: igaz–hamis, szópáro
 - **"Kész" gomb:** a lábléc-ben (mint az igaz–hamis és szópárosító mellett). Rákattintás után azonnal lezárul a Blokk. Az addig helytelenek pirosak lesznek, a helyesek zöldek maradnak.
 - **Pontozás:** csak az számít, ha az összes helyes válasz ki van jelölve és semmi helytelen nincs kijelölve. Ha igen: 100%, egyébként 0%. Ez követi az igaz–hamis és szópárosító logikáját. Egy próbálkozás van. Ha lejár a visszaszámlálás, a ki nem töltött kérdés hibás.
 - **Practice modul (az állapot, amit a képernyők megjelenítenek):** a Practice kiadja az aktuális Multiple-choice Block válaszlehetőségeit (szöveg, és hogy kijelölve van-e), valamint az *érinti a választ*, *Kész* műveleteket. Az engine továbbra is független a felülettől.
-- **Felolvasás:** a Multiple-choice Questiont kiértékelés előtt soha nem olvassa fel, sem magától, sem kérésre. Kiértékelés után előbb a Block hangja szól, majd (ha van `speak_text`) felolvassa azt. A felolvasás után az auto-advance 2 másodpercig vár (vagy a pontozástól, ha nincs `speak_text`).
+- **Felolvasás** (módosítva 2026-11-23; korábban csak kiértékelés után szólt, a Block hangja után):
+  - **A kérdés megjelenésekor:** ha a Questionnek van `speak_text`-je, a kérdésszöveg ezen a nyelven egyszer felolvasódik, amikor a Block képernyőre kerül.
+  - **Kijelöléskor:** ha a Questionnek van `speak_answer`-e, egy válaszlehetőség kijelölésekor annak szövege ezen a nyelven felolvasódik. A kijelölés feloldásakor nem szól semmi. Egy új felolvasás elvágja az éppen szólót, mert az egyetlen felolvasási csatorna szabálya ezt írja elő. A `speak_answer` eddig semmilyen kérdéstípusnál nem szólt; most a többválasztásosnál kap jelentést, a többi típusnál továbbra sem szól.
+  - **Kérésre:** a felolvasás gomb a kérdésszöveget bármikor újraolvassa, kiértékelés előtt is, ha van `speak_text`.
+  - **Kiértékelés után:** `stop`, majd a Block hangja szól, és felolvasás nem követi. Az auto-advance 2 másodperce a pontozástól számít, mint az igaz–hamis és a szópárosító esetén.
+  - A betűzés szabálya (felolvasás csak kiértékelés után, a hang után) nem változik.
+- **Felolvasás kapcsoló:** a Beállítások képernyőn egy „Felolvasás ezen az eszközön” kapcsoló. Alapértéke: bekapcsolva. A böngésző tárolja (`localStorage`, minden olvasás és írás `try/catch`-ben); ha a tárolás nem elérhető, a kapcsoló bekapcsoltnak számít. A szerverre nem kerül, és nem tantárgyankénti. Kikapcsolva egyik kérdéstípusnál sem szól felolvasás, a Block hangja (jó/rossz jelzőhang) viszont igen. Az engine és a Practice modul nem tud a kapcsolóról, mindent ugyanúgy kér. A kapcsolót a böngészős hang-adapter (`audio.ts`) érvényesíti: kikapcsolva a `speak` nem szól, és azonnal teljesül, így az időzítések (auto-advance) ugyanúgy működnek.
 - **Kiválasztás:** a Multiple-choice Questionök ugyanúgy kerülnek kiválasztásra, mint bármely más játszható típus (véletlen sorrend az igaz–hamis, szópárosító és betűzés között).
 - **Backend-ellenőrzés (mentéskor):** egy `multiple-choice` Questionnek legalább egy elem szükséges az `answer`-ben, és minden `answer` elem benne kell, hogy legyen az `options`-ben. Az `options` tömbnek legalább 2 eleme kell legyen. A hibaüzenetek magyarok (pl. „A „Hamis" válasz nincs az opciók között.").
 - **Quiz-összesítők:** a típusonkénti kérdésszámok a `multiple-choice`-t is tartalmazzák.
@@ -65,7 +76,8 @@ Az alkalmazás jelenleg három kérdéstípust támogat: igaz–hamis, szópáro
 ## Testing Decisions
 
 - Jó teszt a nyilvános interfészen keresztül hajtja a rendszert, és azt ellenőrzi, amit egy Participant vagy a szülő észrevenne (a megjelenített állapot, a pontszám, a hangok és felolvasások sorrendje, mi mentődik és mi utasítódik el), soha nem a belső működést.
-- **Practice modul (`createPractice`)** a fő tesztelési pont, memóriabeli data porttal, a rögzítő audio porttal, vezérelt órával és véletlenforrással. Lefedi: több helyes válasz kijelölése, kijelölés feloldása, mind kijelölése, részleges kijelölés (0%), hibás válasz kijelölése (0%), a "Kész" gomb rákattintása után az értékelés, zöld–piros visszajelzés, hogy kiértékelés előtt nincs felolvasás, a hang-utána-felolvasás sorrendje, az auto-advance időzítését a felolvasás végétől (és `speak_text` nélkül a pontozástól), a Blockonként egy kérdést, és a más típusokkal való keveredést.
+- **Practice modul (`createPractice`)** a fő tesztelési pont, memóriabeli data porttal, a rögzítő audio porttal, vezérelt órával és véletlenforrással. Lefedi: több helyes válasz kijelölése, kijelölés feloldása, mind kijelölése, részleges kijelölés (0%), hibás válasz kijelölése (0%), a "Kész" gomb rákattintása után az értékelés, zöld–piros visszajelzés, a kérdés felolvasása megjelenéskor (és `speak_text` nélkül a csend), egy opció felolvasása kijelöléskor `speak_answer` nyelvén (feloldáskor és `speak_answer` nélkül a csend), a `readAloud` kiértékelés előtt is, hogy kiértékelés után csak a Block hangja szól, az auto-advance 2 s-a a pontozástól, a Blockonként egy kérdést, és a más típusokkal való keveredést.
+- **Felolvasás kapcsoló:** a hang-adapter kikapcsolt állapotban nem szól, és a `speak` Promise-a azonnal teljesül, a `playBlockSound` pedig továbbra is szól. Ha az adapter vékony marad, ez kézi ellenőrzés. A kapcsoló tárolása (alapérték, elérhetetlen tárolás) egy kis, a képernyőtől független modulban tesztelhető.
 - **Backend HTTP API**, a meglévő Quiz API tesztek mintájára: egy érvényes Multiple-choice Quiz mentődik; minden elutasítás (üres `answer`, `answer` nem az `options`-ben, 2-nél kevesebb `options`) a saját mezőjét és üzenetét adja vissza; a Quiz-összesítők számolják a `multiple-choice`-t.
 - **Kézi ellenőrzés** (megállapodás szerint nincs hozzá automatikus teszt): a gombok mérete és tödelése telefonon, a szerkesztő típusválasztója.
 

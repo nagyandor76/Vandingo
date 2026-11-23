@@ -153,7 +153,7 @@ export interface MultipleChoiceOption {
 export interface MultipleChoiceView {
   text: string
   options: MultipleChoiceOption[]
-  /** The Question can be read aloud: only once scored, and only with a `speak_text`. */
+  /** The Question can be read aloud: whenever it has a `speak_text`. */
   hearable: boolean
 }
 
@@ -196,18 +196,23 @@ export interface Speech {
   lang: string
 }
 
-/** How a Question's text is read aloud, or nothing if it has no `speak_text`. Its answer is never read. */
+/** How a Question's text is read aloud, or nothing if it has no `speak_text`. */
 export const speechOf = ({ text, speak_text }: PracticeQuestion): Speech | undefined =>
   speak_text ? { text, lang: speak_text } : undefined
 
-/**
- * A spelling or multiple-choice Block is read aloud only once it is scored, as hearing it earlier would give its
- * answer away; it is then read after its Block sound, whether answered right or wrong.
- */
-export const readOnlyOnceScored = (block: Block) => block.type === 'spelling' || block.type === 'multiple-choice'
+/** How an option of a multiple-choice Question is read aloud, or nothing if the Question has no `speak_answer`. */
+const optionSpeechOf = ({ options = [], speak_answer }: PracticeQuestion, option: number): Speech | undefined =>
+  speak_answer ? { text: options[option], lang: speak_answer } : undefined
 
-/** The Question of a Block read only once scored can be read aloud now. */
-const hearable = (block: Block) => block.closed && speechOf(onlyQuestion(block).question) !== undefined
+/**
+ * A spelling Block is read aloud only once it is scored, as hearing it earlier would give its answer away; it is
+ * then read after its Block sound, whether answered right or wrong.
+ */
+export const readOnlyOnceScored = (block: Block) => block.type === 'spelling'
+
+/** The single Question of a spelling or multiple-choice Block can be read aloud now: a spelling word only once scored. */
+const hearable = (block: Block) =>
+  (block.closed || !readOnlyOnceScored(block)) && speechOf(onlyQuestion(block).question) !== undefined
 
 /** The single Question of a spelling or multiple-choice Block. */
 const onlyQuestion = (block: Block) => block.questions[0]
@@ -224,7 +229,8 @@ export interface PracticeState {
   /** The Participant moved on from the last Block: show the summary. */
   finished: boolean
   /**
-   * The latest text to read aloud: the topmost unanswered statement, or one the Participant asked for.
+   * The latest text to read aloud: the topmost unanswered statement, a multiple-choice Question as it appears, an
+   * option just chosen, or one the Participant asked for.
    * A new one is a new object; it stays the same object until the next one, so it is read only once.
    */
   speech?: Speech
@@ -260,12 +266,16 @@ export function answer(state: PracticeState, questionIndex: number, value: TrueF
 
 /**
  * Reads aloud the topmost unanswered statement of the current true–false Block when it becomes the topmost
- * for the first time; without a `speak_text` it stays silent rather than reading the one below.
+ * for the first time; without a `speak_text` it stays silent rather than reading the one below. A multiple-choice
+ * Question is read once, as its Block appears.
  */
 function announce(state: PracticeState): PracticeState {
   const block = currentBlock(state)
-  if (!block || block.closed || block.type !== 'true-false') return state
-  const topIndex = block.questions.findIndex((entry) => entry.given === undefined)
+  if (!block || block.closed) return state
+  const topIndex =
+    block.type === 'true-false' ? block.questions.findIndex((entry) => entry.given === undefined)
+    : block.type === 'multiple-choice' ? 0
+    : -1
   if (topIndex < 0 || block.questions[topIndex].announced) return state
   const questions = block.questions.map((entry, i) => (i === topIndex ? { ...entry, announced: true } : entry))
   return { ...withCurrentBlock(state, { ...block, questions }), speech: speechOf(block.questions[topIndex].question) }
@@ -273,7 +283,7 @@ function announce(state: PracticeState): PracticeState {
 
 /**
  * Reads a Question of the current Block aloud on request, even once the Block is scored; without a
- * `speak_text` nothing is read, and a spelling or multiple-choice Question only once it is scored. Each request
+ * `speak_text` nothing is read, and a spelling word only once it is scored. Each request
  * is a new speech, so the same text can be heard again.
  */
 export function readAloud(state: PracticeState, questionIndex: number): PracticeState {
@@ -486,7 +496,7 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
 
 /**
  * Chooses an option of the current multiple-choice Block, given by its place among the options shown, or lets go
- * of it if it is chosen; a scored Block ignores it.
+ * of it if it is chosen; a scored Block ignores it. A chosen option is read aloud if the Question has a `speak_answer`.
  */
 export function toggle(state: PracticeState, option: number): PracticeState {
   const block = currentBlock(state)
@@ -495,8 +505,11 @@ export function toggle(state: PracticeState, option: number): PracticeState {
   if (index === undefined) return state
   const entry = onlyQuestion(block)
   const chosen = entry.chosen ?? []
-  const questions = [{ ...entry, chosen: chosen.includes(index) ? chosen.filter((i) => i !== index) : [...chosen, index] }]
-  return withCurrentBlock(state, { ...block, questions })
+  const lettingGo = chosen.includes(index)
+  const questions = [{ ...entry, chosen: lettingGo ? chosen.filter((i) => i !== index) : [...chosen, index] }]
+  const toggled = withCurrentBlock(state, { ...block, questions })
+  const speech = lettingGo ? undefined : optionSpeechOf(entry.question, index)
+  return speech ? { ...toggled, speech } : toggled
 }
 
 /**

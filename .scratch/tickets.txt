@@ -1,10 +1,11 @@
-Kész (30)
+Kész (31)
 architecture-followups 01  done    01: Az `api.ts` adja vissza a foglaló Quizeket a Quiz mentésénél
 architecture-followups 02  done    02: Egy sérült Result-fájl ne vigye el a teljes Result-listát
 multiple-choice 01  done    01: A szerkesztőben „Többválasztásos” a típus neve
 multiple-choice 02  done    02: Egy többválasztásos Block lejátszható
 multiple-choice 03  done    03: Felolvasás kiértékelés után, auto-advance a felolvasás végétől
 multiple-choice 04  done    04: A többválasztásos Block telefonra méretezett elrendezése
+multiple-choice 05  done    05: Többválasztásos: a kérdés megjelenéskor, a válasz kijelöléskor hangzik el
 practice-module 01  done    01: Practice modul – a Practice életciklusa egy helyen
 spelling       01  done    01: Az audio port jelzi, ha egy hang vagy felolvasás véget ért
 spelling       02  done    02: A betűzős Quiz menthető a szerkesztőben
@@ -30,4 +31,5 @@ vandingo-mvp   15  done    15: Szerkesztő – Quiz feltöltése JSON-ből
 vandingo-mvp   16  done    16: Beállítások – Quizek feltöltése ZIP-ben
 vandingo-mvp   17  done    17: Beállítások – új Quizek átvétele a forrásból
 
-Nyitott (0)
+Nyitott (1)
+multiple-choice 06  ready-for-human  06: Felolvasás kapcsoló eszközönként a Beállításokban  ← indítható

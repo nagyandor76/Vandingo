@@ -109,7 +109,10 @@ export interface Practice {
   answer(questionIndex: number, value: TrueFalseAnswer): void
   /** Taps a word or a meaning of the current word-matching Block, by its Question's index in the Block. */
   tap(side: Side, index: number): void
-  /** Chooses an option of the current multiple-choice Block, by its place among the options shown, or lets go of it. */
+  /**
+   * Chooses an option of the current multiple-choice Block, by its place among the options shown, or lets go of it.
+   * A chosen option is read aloud if the Question has a `speak_answer`.
+   */
   toggle(option: number): void
   /** Places a tile of the current spelling Block, by its index, in the first empty slot of the word. */
   place(tile: number): void
@@ -118,8 +121,7 @@ export interface Practice {
   /** Takes back the letter at a place of the spelling Block's answer line, counting given characters too. */
   takeBack(place: number): void
   /**
-   * Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word or a multiple-choice
-   * Question only once scored.
+   * Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word only once scored.
    */
   readAloud(questionIndex: number): void
   /** „Kész”: closes and scores the current true–false or multiple-choice Block. */
@@ -172,7 +174,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   let submitted: NewResult | undefined
   let saveStatus: SaveStatus | undefined
 
-  /** The scored spelling or multiple-choice Block whose sound is still playing; what is asked to be read waits for it. */
+  /** The scored spelling Block whose sound is still playing; what is asked to be read waits for it. */
   let soundOf: number | undefined
 
   /** The Participant is still on this Block of the Practice and hasn't left. */
@@ -189,7 +191,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   }
 
   /**
-   * Reads the Question of a scored spelling or multiple-choice Block, then moves on only once the latest reading
+   * Reads the word of a scored spelling Block, then moves on only once the latest reading
    * is over, so the move on never cuts it off; a reading asked for meanwhile restarts the wait.
    */
   const readScored = (speech: Speech, blockIndex: number) => {
@@ -200,7 +202,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   }
 
   /**
-   * A spelling or multiple-choice Block just scored: its sound first, then its Question if it has a reading (the
+   * A spelling Block just scored: its sound first, then its word if it has a reading (the
    * latest one asked for by the end of the sound), then the move on.
    */
   const soundThenRead = (block: Block, blockIndex: number, speech: Speech | undefined) => {
