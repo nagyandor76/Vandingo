@@ -68,6 +68,8 @@ export interface Block {
   closed: boolean
   /** Set when the Block is closed: every answer was correct. */
   allCorrect?: boolean
+  /** Set when the Block is closed as time ran out, before the Participant was done with it. */
+  timedOut?: boolean
   /**
    * Word-matching: the Block indices of the Questions in the order their meanings are shown.
    * The words are shown in Block order, so the two columns are shuffled apart.
@@ -139,7 +141,8 @@ export interface MultipleChoiceOption {
   chosen: boolean
   /**
    * Set once the Block is scored, on a right answer and on a chosen option: `right` for a right answer chosen,
-   * `wrong` for a wrong option chosen or a right answer missed.
+   * `wrong` for a wrong option chosen or a right answer missed. When time ran out before „Kész”, every right answer
+   * is `wrong`, as none was answered in time.
    */
   mark?: 'right' | 'wrong'
 }
@@ -154,7 +157,7 @@ export interface MultipleChoiceView {
 
 /** The multiple-choice Block on screen as the Participant sees it. */
 export function multipleChoiceView(block: Block): MultipleChoiceView {
-  const [entry] = block.questions
+  const entry = onlyQuestion(block)
   const { question, chosen = [] } = entry
   const options = question.options ?? []
   const right = optionsRight(entry)
@@ -163,7 +166,7 @@ export function multipleChoiceView(block: Block): MultipleChoiceView {
     options: block.optionOrder!.map((option): MultipleChoiceOption => {
       const shown = { text: options[option], chosen: chosen.includes(option) }
       const marked = block.closed && (shown.chosen || question.answer.includes(shown.text))
-      return marked ? { ...shown, mark: right[option] ? 'right' : 'wrong' } : shown
+      return marked ? { ...shown, mark: right[option] && !block.timedOut ? 'right' : 'wrong' } : shown
     }),
     hearable: hearable(block),
   }
@@ -201,7 +204,10 @@ export const speechOf = ({ text, speak_text }: PracticeQuestion): Speech | undef
 export const heardOnceScored = (block: Block) => block.type === 'spelling' || block.type === 'multiple-choice'
 
 /** The Question of a Block heard once scored can be read aloud now. */
-const hearable = (block: Block) => block.closed && speechOf(block.questions[0].question) !== undefined
+const hearable = (block: Block) => block.closed && speechOf(onlyQuestion(block).question) !== undefined
+
+/** The single Question of a spelling or multiple-choice Block. */
+const onlyQuestion = (block: Block) => block.questions[0]
 
 export interface PracticeState {
   /** Every Block of the Practice, in the order they are shown. */
@@ -373,8 +379,9 @@ function scoreCurrentBlock(state: PracticeState, { submitted }: { submitted: boo
   }
   const questions = block.questions.map((entry, i) => ({ ...entry, correct: correctOf(entry, i) }))
   const allCorrect = questions.every((entry) => entry.correct)
-  const scored = { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
-  const speech = heardOnceScored(block) ? speechOf(block.questions[0].question) : undefined
+  const closed: Block = { ...block, questions, closed: true, allCorrect, ...(!submitted && { timedOut: true }) }
+  const scored = { ...withCurrentBlock(state, closed), selection: undefined }
+  const speech = heardOnceScored(block) ? speechOf(onlyQuestion(block).question) : undefined
   return speech ? { ...scored, speech } : scored
 }
 
@@ -456,7 +463,7 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
       const block: Block = { type, questions: ofType.slice(offset, offset + count).map((question) => ({ question })), closed: false }
       if (type === 'word-matching') block.meaningOrder = shuffledApart([...block.questions.keys()], random)
       if (type === 'spelling') block.tiles = dealTiles(block.questions[0].question.text, random)
-      if (type === 'multiple-choice') block.optionOrder = shuffle([...(block.questions[0].question.options ?? []).keys()], random)
+      if (type === 'multiple-choice') block.optionOrder = shuffledApart([...(block.questions[0].question.options ?? []).keys()], random)
       offset += count
       return block
     })
@@ -483,7 +490,7 @@ export function toggle(state: PracticeState, shown: number): PracticeState {
   if (block.closed || block.type !== 'multiple-choice') return state
   const option = block.optionOrder![shown]
   if (option === undefined) return state
-  const [entry] = block.questions
+  const entry = onlyQuestion(block)
   const chosen = entry.chosen ?? []
   const questions = [{ ...entry, chosen: chosen.includes(option) ? chosen.filter((o) => o !== option) : [...chosen, option] }]
   return withCurrentBlock(state, { ...block, questions })

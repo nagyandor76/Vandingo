@@ -858,6 +858,13 @@ describe('a multiple-choice Block', () => {
     })
   })
 
+  it('never shows the options in the order they are written, even when the shuffle leaves them in place', async () => {
+    const p = open(memoryData({ questions: [cities] }).data, undefined, inOrder)
+    await settle()
+
+    expect(texts(p)).toEqual(['Duna', 'Szeged', 'Mátra', 'Budapest'])
+  })
+
   it('chooses any number of options with a tap, and lets go of a chosen one with another', async () => {
     const p = open(memoryData({ questions: [cities] }).data)
     await settle()
@@ -922,6 +929,17 @@ describe('a multiple-choice Block', () => {
 
     expect(p.getSnapshot()).toMatchObject({ timedOut: true, correctInBlock: 0, block: { closed: true, allCorrect: false } })
     expect(saved).toMatchObject([{ total: 1, correct: 0, scorePercent: 0 }])
+  })
+
+  it('when time runs out, marks every right option red as not answered in time, and a wrong option chosen red', async () => {
+    const p = open(memoryData({ questions: [cities] }).data)
+    await settle()
+    choose(p, 'Budapest', 'Duna')
+
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    const byText = Object.fromEntries(multipleChoiceOf(p).options.map(({ text, mark }) => [text, mark]))
+    expect(byText).toEqual({ Budapest: 'wrong', Duna: 'wrong', Szeged: 'wrong', Mátra: undefined })
   })
 
   it('comes one Question per Block, each once, mixed with the Blocks of other types', async () => {
