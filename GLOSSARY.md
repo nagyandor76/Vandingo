@@ -44,7 +44,7 @@ One sitting in which a participant answers questions drawn, without repetition, 
 *Avoid*: Session, attempt, run
 
 **Block** (*Blokk*):
-The group of same-type questions shown and scored together within a practice: three true–false statements, five word pairs or one spelling word.
+The group of same-type questions shown and scored together within a practice: three true–false statements, five word pairs, one spelling word or one multiple-choice Question.
 *Avoid*: Page, round
 
 **Result** (*Eredmény*):

@@ -849,10 +849,10 @@ describe('a multiple-choice Block', () => {
     expect(multipleChoiceOf(p)).toEqual({
       text: 'Melyik város?',
       options: [
-        { text: 'Mátra', chosen: false },
-        { text: 'Duna', chosen: false },
-        { text: 'Szeged', chosen: false },
-        { text: 'Budapest', chosen: false },
+        { text: 'Mátra', chosen: false, faded: false },
+        { text: 'Duna', chosen: false, faded: false },
+        { text: 'Szeged', chosen: false, faded: false },
+        { text: 'Budapest', chosen: false, faded: false },
       ],
       hearable: false,
     })
@@ -902,7 +902,7 @@ describe('a multiple-choice Block', () => {
     }
   })
 
-  it('once scored, marks the right options green and the wrongly chosen or missed ones red, and ignores taps', async () => {
+  it('once scored, marks the right options green and the wrongly chosen or missed ones red, fades the rest, and ignores taps', async () => {
     const p = open(memoryData({ questions: [cities] }).data)
     await settle()
     choose(p, 'Budapest', 'Duna')
@@ -912,10 +912,10 @@ describe('a multiple-choice Block', () => {
 
     const byText = Object.fromEntries(multipleChoiceOf(p).options.map(({ text, ...rest }) => [text, rest]))
     expect(byText).toEqual({
-      Budapest: { chosen: true, mark: 'right' },
-      Duna: { chosen: true, mark: 'wrong' },
-      Szeged: { chosen: false, mark: 'wrong' },
-      Mátra: { chosen: false },
+      Budapest: { chosen: true, mark: 'right', faded: false },
+      Duna: { chosen: true, mark: 'wrong', faded: false },
+      Szeged: { chosen: false, mark: 'wrong', faded: false },
+      Mátra: { chosen: false, faded: true },
     })
   })
 

@@ -145,6 +145,8 @@ export interface MultipleChoiceOption {
    * is `wrong`, as none was answered in time.
    */
   mark?: 'right' | 'wrong'
+  /** Once the Block is scored, an option left out of the scoring: neither chosen nor a right answer. */
+  faded: boolean
 }
 
 /** A multiple-choice Block as the Participant sees it: the question and its options in the order they are shown. */
@@ -166,7 +168,8 @@ export function multipleChoiceView(block: Block): MultipleChoiceView {
     options: block.optionOrder!.map((option): MultipleChoiceOption => {
       const shown = { text: options[option], chosen: chosen.includes(option) }
       const marked = block.closed && (shown.chosen || question.answer.includes(shown.text))
-      return marked ? { ...shown, mark: right[option] && !block.timedOut ? 'right' : 'wrong' } : shown
+      if (!marked) return { ...shown, faded: block.closed }
+      return { ...shown, mark: right[option] && !block.timedOut ? 'right' : 'wrong', faded: false }
     }),
     hearable: hearable(block),
   }
@@ -201,9 +204,9 @@ export const speechOf = ({ text, speak_text }: PracticeQuestion): Speech | undef
  * A spelling or multiple-choice Block is read aloud only once it is scored, as hearing it earlier would give its
  * answer away; it is then read after its Block sound, whether answered right or wrong.
  */
-export const heardOnceScored = (block: Block) => block.type === 'spelling' || block.type === 'multiple-choice'
+export const readOnlyOnceScored = (block: Block) => block.type === 'spelling' || block.type === 'multiple-choice'
 
-/** The Question of a Block heard once scored can be read aloud now. */
+/** The Question of a Block read only once scored can be read aloud now. */
 const hearable = (block: Block) => block.closed && speechOf(onlyQuestion(block).question) !== undefined
 
 /** The single Question of a spelling or multiple-choice Block. */
@@ -270,12 +273,12 @@ function announce(state: PracticeState): PracticeState {
 
 /**
  * Reads a Question of the current Block aloud on request, even once the Block is scored; without a
- * `speak_text` nothing is read, and a spelling or multiple-choice Question only once it is scored. Each request is a new speech,
- * so the same text can be heard again.
+ * `speak_text` nothing is read, and a spelling or multiple-choice Question only once it is scored. Each request
+ * is a new speech, so the same text can be heard again.
  */
 export function readAloud(state: PracticeState, questionIndex: number): PracticeState {
   const block = currentBlock(state)
-  if (heardOnceScored(block) && !block.closed) return state
+  if (readOnlyOnceScored(block) && !block.closed) return state
   const speech = speechOf(block.questions[questionIndex].question)
   return speech ? { ...state, speech } : state
 }
@@ -381,7 +384,7 @@ function scoreCurrentBlock(state: PracticeState, { submitted }: { submitted: boo
   const allCorrect = questions.every((entry) => entry.correct)
   const closed: Block = { ...block, questions, closed: true, allCorrect, ...(!submitted && { timedOut: true }) }
   const scored = { ...withCurrentBlock(state, closed), selection: undefined }
-  const speech = heardOnceScored(block) ? speechOf(onlyQuestion(block).question) : undefined
+  const speech = readOnlyOnceScored(block) ? speechOf(onlyQuestion(block).question) : undefined
   return speech ? { ...scored, speech } : scored
 }
 
@@ -485,14 +488,14 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
  * Chooses an option of the current multiple-choice Block, given by its place among the options shown, or lets go
  * of it if it is chosen; a scored Block ignores it.
  */
-export function toggle(state: PracticeState, shown: number): PracticeState {
+export function toggle(state: PracticeState, option: number): PracticeState {
   const block = currentBlock(state)
   if (block.closed || block.type !== 'multiple-choice') return state
-  const option = block.optionOrder![shown]
-  if (option === undefined) return state
+  const index = block.optionOrder![option]
+  if (index === undefined) return state
   const entry = onlyQuestion(block)
   const chosen = entry.chosen ?? []
-  const questions = [{ ...entry, chosen: chosen.includes(option) ? chosen.filter((o) => o !== option) : [...chosen, option] }]
+  const questions = [{ ...entry, chosen: chosen.includes(index) ? chosen.filter((i) => i !== index) : [...chosen, index] }]
   return withCurrentBlock(state, { ...block, questions })
 }
 

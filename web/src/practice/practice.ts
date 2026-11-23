@@ -7,12 +7,12 @@ import {
   answer,
   closeBlock,
   currentBlock,
-  heardOnceScored,
   isPassed,
   multipleChoiceView,
   next,
   place,
   readAloud,
+  readOnlyOnceScored,
   spellingView,
   startPractice,
   takeBack,
@@ -117,7 +117,10 @@ export interface Practice {
   takeBackLast(): void
   /** Takes back the letter at a place of the spelling Block's answer line, counting given characters too. */
   takeBack(place: number): void
-  /** Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word only once scored. */
+  /**
+   * Reads a Question of the current Block aloud again, if it has a `speak_text`; a spelling word or a multiple-choice
+   * Question only once scored.
+   */
   readAloud(questionIndex: number): void
   /** „Kész”: closes and scores the current true–false or multiple-choice Block. */
   close(): void
@@ -169,7 +172,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   let submitted: NewResult | undefined
   let saveStatus: SaveStatus | undefined
 
-  /** The scored Block heard once scored whose sound is still playing; what is asked to be read waits for it. */
+  /** The scored spelling or multiple-choice Block whose sound is still playing; what is asked to be read waits for it. */
   let soundOf: number | undefined
 
   /** The Participant is still on this Block of the Practice and hasn't left. */
@@ -186,8 +189,8 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   }
 
   /**
-   * Reads the Question of a scored Block heard once scored, then moves on only once the latest reading is over, so the move on never cuts
-   * it off; a reading asked for meanwhile restarts the wait.
+   * Reads the Question of a scored spelling or multiple-choice Block, then moves on only once the latest reading
+   * is over, so the move on never cuts it off; a reading asked for meanwhile restarts the wait.
    */
   const readScored = (speech: Speech, blockIndex: number) => {
     clearTimeout(advancing)
@@ -197,8 +200,8 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   }
 
   /**
-   * A Block heard once scored, just scored: its sound first, then its Question if it has a reading (the latest one asked for by the
-   * end of the sound), then the move on.
+   * A spelling or multiple-choice Block just scored: its sound first, then its Question if it has a reading (the
+   * latest one asked for by the end of the sound), then the move on.
    */
   const soundThenRead = (block: Block, blockIndex: number, speech: Speech | undefined) => {
     soundOf = blockIndex
@@ -223,7 +226,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     const block = currentBlock(moved)
     const scoredBefore = moved.blockIndex === previous.blockIndex && currentBlock(previous).closed
     const scoredNow = block.closed && !scoredBefore
-    if (heardOnceScored(block)) {
+    if (readOnlyOnceScored(block)) {
       // Read only once scored, after the Block sound.
       if (scoredNow) {
         audio.stop()
