@@ -17,7 +17,7 @@ Egy Practice három rétegből áll a `web/src/practice/` és a `web/src/screens
 ## Szabályok, amelyekre a rétegek épülnek
 
 - **Egyetlen felolvasási csatorna:** minden felolvasásról az engine dönt (`speech` az állapotban, minden új kérés új objektum). A modul a régi és az új állapotot összevetve hívja a hang-portot.
-- **Block-hang:** pontozott Blockonként egyszer, előtte `stop`. Betűzős Blocknál a felolvasás a hang után jön, az `auto_advance` 2 s-a a legutóbbi felolvasás végétől indul; a többi típusnál a hang elvágja a felolvasást, és a 2 s a pontozástól számít. Result után nincs automatikus továbblépés.
+- **Block-hang:** pontozott Blockonként egyszer, előtte `stop`. Betűzős és többválasztásos Blocknál (kiértékelés előtt ezeket semmi nem olvassa fel) a felolvasás a hang után jön, az `auto_advance` 2 s-a a legutóbbi felolvasás végétől indul; a többi típusnál a hang elvágja a felolvasást, és a 2 s a pontozástól számít. Result után nincs automatikus továbblépés.
 - **Megjelenítési tények a pillanatképből:** a `running` pillanatkép adja a `progress`, `correctInBlock`, `timedOut`, `resultReady`, a betűzős `spelling` nézet (helyek, gombok, `correctWord`, `hearable`) és a többválasztásos `multipleChoice` nézet (kérdésszöveg, opciók a kevert sorrendben: szöveg, `chosen`, kiértékelés után `mark`: `right`/`wrong`) értékét. A színek és feliratok a képernyőben maradnak.
 
 ## Tesztelés

@@ -7,6 +7,7 @@ import {
   answer,
   closeBlock,
   currentBlock,
+  heardOnceScored,
   isPassed,
   multipleChoiceView,
   next,
@@ -168,7 +169,7 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   let submitted: NewResult | undefined
   let saveStatus: SaveStatus | undefined
 
-  /** The scored spelling Block whose sound is still playing; what is asked to be read waits for it. */
+  /** The scored Block heard once scored whose sound is still playing; what is asked to be read waits for it. */
   let soundOf: number | undefined
 
   /** The Participant is still on this Block of the Practice and hasn't left. */
@@ -185,10 +186,10 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   }
 
   /**
-   * Reads a scored spelling word, then moves on only once the latest reading is over, so the move on never cuts
+   * Reads the Question of a scored Block heard once scored, then moves on only once the latest reading is over, so the move on never cuts
    * it off; a reading asked for meanwhile restarts the wait.
    */
-  const readSpelling = (speech: Speech, blockIndex: number) => {
+  const readScored = (speech: Speech, blockIndex: number) => {
     clearTimeout(advancing)
     audio.speak(speech).then(() => {
       if (state?.speech === speech) advanceLater(blockIndex)
@@ -196,16 +197,16 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
   }
 
   /**
-   * A scored spelling Block: its sound first, then the word if it has a reading (the latest one asked for by the
+   * A Block heard once scored, just scored: its sound first, then its Question if it has a reading (the latest one asked for by the
    * end of the sound), then the move on.
    */
-  const soundSpelling = (block: Block, blockIndex: number, speech: Speech | undefined) => {
+  const soundThenRead = (block: Block, blockIndex: number, speech: Speech | undefined) => {
     soundOf = blockIndex
     audio.playBlockSound(block.allCorrect!).then(() => {
       if (soundOf !== blockIndex) return
       soundOf = undefined
       if (!stillOn(blockIndex)) return
-      if (speech && state!.speech) readSpelling(state!.speech, blockIndex)
+      if (speech && state!.speech) readScored(state!.speech, blockIndex)
     })
     if (!speech) advanceLater(blockIndex)
   }
@@ -222,12 +223,12 @@ export function createPractice(choice: PracticeChoice, { data, audio, random = M
     const block = currentBlock(moved)
     const scoredBefore = moved.blockIndex === previous.blockIndex && currentBlock(previous).closed
     const scoredNow = block.closed && !scoredBefore
-    if (block.type === 'spelling') {
-      // A spelling word is only read once scored, after the Block sound.
+    if (heardOnceScored(block)) {
+      // Read only once scored, after the Block sound.
       if (scoredNow) {
         audio.stop()
-        soundSpelling(block, moved.blockIndex, newSpeech)
-      } else if (newSpeech && soundOf !== moved.blockIndex) readSpelling(newSpeech, moved.blockIndex)
+        soundThenRead(block, moved.blockIndex, newSpeech)
+      } else if (newSpeech && soundOf !== moved.blockIndex) readScored(newSpeech, moved.blockIndex)
     } else {
       if (newSpeech) audio.speak(newSpeech)
       if (scoredNow) {
