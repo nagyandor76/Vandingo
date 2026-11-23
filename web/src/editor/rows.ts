@@ -7,7 +7,7 @@ export const questionTypes: { type: QuestionType; label: string }[] = [
   { type: 'true-false', label: 'Igaz–hamis' },
   { type: 'word-matching', label: 'Szópárosítás' },
   { type: 'spelling', label: 'Betűzés' },
-  { type: 'multiple-choice', label: 'Feleletválasztós' },
+  { type: 'multiple-choice', label: 'Többválasztásos' },
   { type: 'ordered', label: 'Sorrendező' },
 ]
 

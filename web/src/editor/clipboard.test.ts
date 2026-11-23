@@ -67,7 +67,7 @@ describe('pasteCells', () => {
   it('reads cells as the grid shows them: type names, Igaz/Hamis, – for no reading aloud', () => {
     const pasted = pasteCells([row()], { row: 0, field: 'type' }, [
       ['Igaz–hamis', 'A Nap csillag', '', 'Hamis', '15', '–', 'hu-HU'],
-      ['Feleletválasztós', 'Főváros?', 'Buda; Pest', 'Pest', '', '', ''],
+      ['Többválasztásos', 'Főváros?', 'Buda; Pest', 'Pest', '', '', ''],
       ['word-matching', 'horse', '', 'ló', '', 'en-GB', '–'],
     ])
     expect(pasted.map(toQuestion)).toEqual([
@@ -75,6 +75,11 @@ describe('pasteCells', () => {
       { type: 'multiple-choice', text: 'Főváros?', options: ['Buda', 'Pest'], answer: ['Pest'] },
       { type: 'word-matching', text: 'horse', answer: ['ló'], speak_text: 'en-GB' },
     ])
+  })
+
+  it('reads the old name „Feleletválasztós” as multiple-choice, so earlier copies still paste', () => {
+    const pasted = pasteCells([row()], { row: 0, field: 'type' }, [['Feleletválasztós']])
+    expect(pasted[0].type).toBe('multiple-choice')
   })
 
   it('keeps wrong data as it is, so the save rejects it', () => {
@@ -100,7 +105,7 @@ describe('copyCells', () => {
   it('writes the range between two cells as Excel reads it, as the grid shows it', () => {
     expect(copyCells(rows, { row: 0, field: 'type' }, { row: 1, field: 'speak_answer' })).toBe(
       'Igaz–hamis\tA Nap csillag\t\tHamis\t15\t–\thu-HU\r\n' +
-        'Feleletválasztós\t"Két\nsor, ""idézettel"""\tBuda; Pest\tPest\t\t–\t–\r\n',
+        'Többválasztásos\t"Két\nsor, ""idézettel"""\tBuda; Pest\tPest\t\t–\t–\r\n',
     )
   })
 
