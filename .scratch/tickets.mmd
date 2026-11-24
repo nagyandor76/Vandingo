@@ -3,8 +3,24 @@ flowchart LR
     architecture_followups_1["01: Az `api.ts` adja vissza a foglaló Quizeket a Quiz mentésénél<br/><small>done</small>"]:::done
     architecture_followups_2["02: Egy sérült Result-fájl ne vigye el a teljes Result-listát<br/><small>done</small>"]:::done
   end
+  subgraph multiple_choice_feature["multiple-choice"]
+    multiple_choice_1["01: A szerkesztőben „Többválasztásos” a típus neve<br/><small>done</small>"]:::done
+    multiple_choice_2["02: Egy többválasztásos Block lejátszható<br/><small>done</small>"]:::done
+    multiple_choice_3["03: Felolvasás kiértékelés után, auto-advance a felolvasás végétől<br/><small>done</small>"]:::done
+    multiple_choice_4["04: A többválasztásos Block telefonra méretezett elrendezése<br/><small>done</small>"]:::done
+    multiple_choice_5["05: Többválasztásos: a kérdés megjelenéskor, a válasz kijelöléskor hangzik el<br/><small>done</small>"]:::done
+    multiple_choice_6["06: Felolvasás kapcsoló eszközönként a Beállításokban<br/><small>ready-for-human</small>"]:::ready_for_human
+  end
   subgraph practice_module_feature["practice-module"]
     practice_module_1["01: Practice modul – a Practice életciklusa egy helyen<br/><small>done</small>"]:::done
+  end
+  subgraph spelling_feature["spelling"]
+    spelling_1["01: Az audio port jelzi, ha egy hang vagy felolvasás véget ért<br/><small>done</small>"]:::done
+    spelling_2["02: A betűzős Quiz menthető a szerkesztőben<br/><small>done</small>"]:::done
+    spelling_3["03: Egy betűzős Block lejátszható<br/><small>done</small>"]:::done
+    spelling_4["04: Javítás kirakás közben: ⌫ és a lerakott betű visszavétele<br/><small>done</small>"]:::done
+    spelling_5["05: Felolvasás kiértékelés után, és auto-advance a felolvasás végétől<br/><small>done</small>"]:::done
+    spelling_6["06: Telefonra méretezett gombok<br/><small>done</small>"]:::done
   end
   subgraph vandingo_mvp_feature["vandingo-mvp"]
     vandingo_mvp_1["01: Alapváz – üres alkalmazás, amely elindul<br/><small>done</small>"]:::done
@@ -25,6 +41,13 @@ flowchart LR
     vandingo_mvp_16["16: Beállítások – Quizek feltöltése ZIP-ben<br/><small>done</small>"]:::done
     vandingo_mvp_17["17: Beállítások – új Quizek átvétele a forrásból<br/><small>done</small>"]:::done
   end
+  multiple_choice_2 --> multiple_choice_3
+  multiple_choice_2 --> multiple_choice_4
+  spelling_2 --> spelling_3
+  spelling_3 --> spelling_4
+  spelling_1 --> spelling_5
+  spelling_3 --> spelling_5
+  spelling_3 --> spelling_6
   vandingo_mvp_1 --> vandingo_mvp_2
   vandingo_mvp_2 --> vandingo_mvp_3
   vandingo_mvp_3 --> vandingo_mvp_4

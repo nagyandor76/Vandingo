@@ -17,9 +17,13 @@ export interface CellPosition {
 /** Lower case with any dash as '-', so „Igaz-hamis” typed in Excel is the same as the grid's „Igaz–hamis”. */
 const loose = (text: string) => text.trim().toLowerCase().replace(/[‐-―−]/g, '-')
 
-/** A Question type from its key or the name the grid shows; anything else is kept, for the save to reject. */
+/** Names the grid used to show, so rows copied before a rename still paste. */
+const formerLabels: Record<string, QuestionType> = { feleletválasztós: 'multiple-choice' }
+
+/** A Question type from its key, the name the grid shows or a former name; anything else is kept, for the save to reject. */
 const readType = (text: string) =>
   (questionTypes.find(({ type, label }) => loose(text) === loose(type) || loose(text) === loose(label))?.type ??
+    formerLabels[loose(text)] ??
     text.trim()) as QuestionType
 
 /** A true–false answer from Igaz/Hamis or true/false; anything else is kept, for the save to reject. */

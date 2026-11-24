@@ -7,6 +7,7 @@ import {
   createPractice,
   type Block,
   type BlockQuestion,
+  type MultipleChoiceView,
   type Practice as PracticeModule,
   type PracticeResult,
   type PracticeSnapshot,
@@ -130,6 +131,12 @@ export default function Practice() {
             onTakeBack={practice.takeBack}
             onReadAloud={() => practice.readAloud(0)}
           />
+        ) : block.type === 'multiple-choice' && snapshot.multipleChoice ? (
+          <MultipleChoice
+            multipleChoice={snapshot.multipleChoice}
+            onToggle={practice.toggle}
+            onReadAloud={() => practice.readAloud(0)}
+          />
         ) : (
           block.questions.map((entry, i) => (
             <Statement
@@ -193,6 +200,7 @@ const titles: Partial<Record<Block['type'], string>> = {
   'true-false': 'Igaz vagy hamis?',
   'word-matching': 'Párosítsd össze!',
   spelling: 'Rakd ki angolul!',
+  'multiple-choice': 'Válaszd ki a helyeseket!',
 }
 
 /** What to do in a Block that is scored by itself, without a „Kész” button. */
@@ -292,18 +300,61 @@ function WordMatching({ block, selection, onTap }: { block: Block; selection?: S
   )
 }
 
-/** One word or meaning: a paired one shows its pair's number in a faded green, a scored one green or red. */
-function Tile({ text, pairNumber, tone, selected, onClick }: {
+/**
+ * A multiple-choice Block: the question and its options in a column. A tap chooses an option or lets go of it;
+ * a chosen one carries a ✓. „Kész” scores the Block. Once scored, a right answer chosen turns green, a wrong option
+ * chosen or a right answer missed turns red, and the rest fade; the ✓ stays, telling a wrong choice from a miss.
+ * Each option takes the full width; a long one wraps into a taller tile. 🔊 reads the question again
+ * if it has a reading.
+ */
+function MultipleChoice({ multipleChoice, onToggle, onReadAloud }: {
+  multipleChoice: MultipleChoiceView
+  onToggle: (option: number) => void
+  onReadAloud: () => void
+}) {
+  return (
+    <Stack spacing={1.25}>
+      <Typography variant="h3" component="p" sx={{ fontWeight: 500, mb: 0.5, overflowWrap: 'anywhere' }}>
+        {multipleChoice.text}
+      </Typography>
+      {multipleChoice.hearable && (
+        <ButtonBase aria-label="Felolvasás" onClick={onReadAloud} sx={{ width: 44, height: 44, fontSize: 22, borderRadius: 1, alignSelf: 'flex-start' }}>
+          🔊
+        </ButtonBase>
+      )}
+      {multipleChoice.options.map((option, i) => (
+        <Tile
+          key={i}
+          text={option.text}
+          tone={option.mark === 'right' ? 'success' : option.mark === 'wrong' ? 'error' : undefined}
+          selected={option.chosen && !option.mark}
+          checked={option.chosen}
+          faded={option.faded}
+          onClick={() => onToggle(i)}
+        />
+      ))}
+    </Stack>
+  )
+}
+
+/**
+ * One word, meaning or option: a paired one shows its pair's number in a faded green, a scored one green or red.
+ * A checked one shows a ✓ where a pair's number goes. A faded one is left out of the scoring and can no longer be tapped.
+ */
+function Tile({ text, pairNumber, tone, selected, checked = false, faded = false, onClick }: {
   text: string
   pairNumber?: number
   tone?: 'success' | 'error'
   selected: boolean
+  checked?: boolean
+  faded?: boolean
   onClick: () => void
 }) {
   const theme = useTheme()
   const { primary } = theme.palette
   // A paired item keeps the selection's green, faded; its number tells which pair it is in.
   const paired = pairNumber !== undefined
+  const badge = paired ? pairNumber : checked ? '✓' : undefined
   const color = tone ? theme.palette[tone].main : selected ? primary.main : paired ? alpha(primary.main, 0.45) : theme.palette.divider
 
   return (
@@ -321,11 +372,12 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
         border: `1.5px solid ${color}`,
         bgcolor: tone ? theme.palette[tone].soft : selected ? primary.soft : paired ? alpha(primary.soft, 0.5) : 'background.paper',
         boxShadow: selected ? `0 0 0 3px ${primary.soft}` : '0 1px 2px rgba(16,24,40,0.06)',
-        transition: 'background-color 120ms, border-color 120ms, box-shadow 120ms',
-        ...(tone && { pointerEvents: 'none' }),
+        transition: 'background-color 120ms, border-color 120ms, box-shadow 120ms, opacity 120ms',
+        ...((tone || faded) && { pointerEvents: 'none' }),
+        ...(faded && { opacity: 0.5 }),
       }}
     >
-      {paired && (
+      {badge !== undefined && (
         <Box
           sx={{
             flex: 'none',
@@ -341,10 +393,10 @@ function Tile({ text, pairNumber, tone, selected, onClick }: {
             ...(!tone && { border: `1px solid ${alpha(primary.main, 0.45)}` }),
           }}
         >
-          {pairNumber}
+          {badge}
         </Box>
       )}
-      <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{text}</Typography>
+      <Typography sx={{ minWidth: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{text}</Typography>
     </ButtonBase>
   )
 }

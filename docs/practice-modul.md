@@ -5,20 +5,21 @@ Egy Practice három rétegből áll a `web/src/practice/` és a `web/src/screens
 ## Rétegek
 
 - **Engine** (`practice/engine.ts`): a Practice szabályai, tiszta függvények, felület, időzítő és hang nélkül. Kiválasztás, Blockképzés, a betűgombok kiosztása, válaszok, pontozás, időlejárat, és hogy mit kell felolvasni. Minden művelet a teljes új `PracticeState`-et adja vissza.
-- **Practice modul** (`practice/practice.ts`): egy futó Practice a betöltéstől a mentésig. Az engine köré épül, és birtokolja a visszaszámlálást, a hangot, az `auto_advance`-ot és a Result egyszeri mentését. Interfésze: `subscribe`, `getSnapshot`, valamint a műveletek (`answer`, `tap`, `place`, `takeBack`, `takeBackLast`, `readAloud`, `close`, `next`, `retrySave`, `dispose`).
+- **Practice modul** (`practice/practice.ts`): egy futó Practice a betöltéstől a mentésig. Az engine köré épül, és birtokolja a visszaszámlálást, a hangot, az `auto_advance`-ot és a Result egyszeri mentését. Interfésze: `subscribe`, `getSnapshot`, valamint a műveletek (`answer`, `tap`, `toggle`, `place`, `takeBack`, `takeBackLast`, `readAloud`, `close`, `next`, `retrySave`, `dispose`). A `close` a „Kész”: az igaz–hamis és a többválasztásos Blockot zárja le; a `toggle` egy többválasztásos opciót jelöl ki vagy old fel (a megjelenített sorrend szerinti indexszel).
 - **Képernyő** (`screens/Practice.tsx`): csak a pillanatképet rajzolja ki (`useSyncExternalStore`), és továbbítja a koppintásokat. Csak a Practice modult importálja, az engine-t nem (ezt az oxlint ellenőrzi).
 
 ## Portok
 
 - **Adat:** `fetchSubjects`, `fetchQuestions`, `fetchQuizzes`, `saveResult`; az `api.ts` az adapter.
-- **Hang:** `speak`, `stop`, `playBlockSound`. A `speak` és a `playBlockSound` Promise-t ad vissza, amely a hang vagy felolvasás végén teljesül (vége, megszakítás, hiba, mentőidőzítő), és sosem utasít el. Az `audio.ts` a böngészős adapter.
+- **Hang:** `speak`, `stop`, `playBlockSound`. A `speak` és a `playBlockSound` Promise-t ad vissza, amely a hang vagy felolvasás végén teljesül (vége, megszakítás, hiba, mentőidőzítő), és sosem utasít el. Az `audio.ts` a böngészős adapter. Ez tartja tiszteletben a Beállítások „Felolvasás ezen az eszközön” kapcsolóját (`readings.ts`, a böngésző tárolja): kikapcsolva a `speak` nem szól, és azonnal teljesül, a `playBlockSound` viszont szól. Az engine és a modul a kapcsolóról nem tud.
 - **Véletlen:** opcionális bemenet, alapértéke `Math.random`. Időnek nincs portja; a tesztek hamis időzítőt használnak.
 
 ## Szabályok, amelyekre a rétegek épülnek
 
 - **Egyetlen felolvasási csatorna:** minden felolvasásról az engine dönt (`speech` az állapotban, minden új kérés új objektum). A modul a régi és az új állapotot összevetve hívja a hang-portot.
-- **Block-hang:** pontozott Blockonként egyszer, előtte `stop`. Betűzős Blocknál a felolvasás a hang után jön, az `auto_advance` 2 s-a a legutóbbi felolvasás végétől indul; a többi típusnál a hang elvágja a felolvasást, és a 2 s a pontozástól számít. Result után nincs automatikus továbblépés.
-- **Megjelenítési tények a pillanatképből:** a `running` pillanatkép adja a `progress`, `correctInBlock`, `timedOut`, `resultReady` és a betűzős `spelling` nézet (helyek, gombok, `correctWord`, `hearable`) értékét. A színek és feliratok a képernyőben maradnak.
+- **Mikor szól felolvasás:** igaz–hamisnál a legfelső megválaszolatlan állítás. Többválasztásosnál a kérdés egyszer, a Block megjelenésekor (`speak_text`), és egy opció a kijelölésekor (`speak_answer` nyelvén, feloldáskor nem). Szópárosítónál az angol szó koppintáskor. Kérésre (`readAloud`) bármikor, kivéve a betűzést, amely csak a kiértékelése után olvasható fel.
+- **Block-hang:** pontozott Blockonként egyszer, előtte `stop`. Betűzős Blocknál (kiértékelés előtt semmi nem olvassa fel) a felolvasás a hang után jön, és az `auto_advance` 2 s-a a legutóbbi felolvasás végétől indul. A többi típusnál a hang elvágja a felolvasást, utána nem jön felolvasás, és a 2 s a pontozástól számít. Result után nincs automatikus továbblépés.
+- **Megjelenítési tények a pillanatképből:** a `running` pillanatkép adja a `progress`, `correctInBlock`, `timedOut`, `resultReady`, a betűzős `spelling` nézet (helyek, gombok, `correctWord`, `hearable`) és a többválasztásos `multipleChoice` nézet (kérdésszöveg, opciók a kevert sorrendben: szöveg, `chosen`, kiértékelés után `mark`: `right`/`wrong` — időlejáratkor minden helyes opció `wrong` —, és `faded`: kiértékelés után a pontozásból kimaradt opció) értékét. A színek és feliratok a képernyőben maradnak.
 
 ## Tesztelés
 

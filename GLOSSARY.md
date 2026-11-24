@@ -31,7 +31,7 @@ A question type in which the participant is shown a Hungarian meaning and builds
 *Avoid*: Typing, dictation
 
 **Playable type**:
-A question type that a practice can currently present: true–false, word-matching and spelling. Questions of other types are kept but skipped.
+A question type that a practice can currently present: true–false, word-matching, spelling and multiple-choice. Questions of other types are kept but skipped.
 
 ### Playing
 
@@ -44,7 +44,7 @@ One sitting in which a participant answers questions drawn, without repetition, 
 *Avoid*: Session, attempt, run
 
 **Block** (*Blokk*):
-The group of same-type questions shown and scored together within a practice: three true–false statements, five word pairs or one spelling word.
+The group of same-type questions shown and scored together within a practice: three true–false statements, five word pairs, one spelling word or one multiple-choice Question.
 *Avoid*: Page, round
 
 **Result** (*Eredmény*):

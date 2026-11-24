@@ -4,7 +4,7 @@
 export type QuestionType = 'true-false' | 'word-matching' | 'spelling' | 'multiple-choice' | 'ordered'
 
 /** The question types a Practice can present, with the number of Questions in one whole Block. */
-const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5, spelling: 1 }
+const blockSizes: Partial<Record<QuestionType, number>> = { 'true-false': 3, 'word-matching': 5, spelling: 1, 'multiple-choice': 1 }
 
 /**
  * The playable types a Practice draws from, given a range's Question count per type: a type is used
@@ -56,6 +56,8 @@ export interface BlockQuestion {
   placed?: (number | undefined)[]
   /** Spelling: the letters (by their place in the word) holding a tile, in the order the tiles were placed. */
   placingOrder?: number[]
+  /** Multiple-choice: the indices in `options` of the chosen options. */
+  chosen?: number[]
 }
 
 /** Same-type Questions shown and scored together. */
@@ -66,6 +68,8 @@ export interface Block {
   closed: boolean
   /** Set when the Block is closed: every answer was correct. */
   allCorrect?: boolean
+  /** Set when the Block is closed as time ran out, before the Participant was done with it. */
+  timedOut?: boolean
   /**
    * Word-matching: the Block indices of the Questions in the order their meanings are shown.
    * The words are shown in Block order, so the two columns are shuffled apart.
@@ -73,6 +77,8 @@ export interface Block {
   meaningOrder?: number[]
   /** Spelling: the lower-case letters on the tiles, in the order they are shown: the word's letters and two extras. */
   tiles?: string[]
+  /** Multiple-choice: the indices in the Question's `options`, in the order the options are shown. */
+  optionOrder?: number[]
 }
 
 /** One place in the answer line of a spelling word: a character given in advance, or a letter to place. */
@@ -125,7 +131,47 @@ export function spellingView(block: Block): SpellingView {
     slots,
     tiles: tiles.map((letter, i) => ({ letter, used: used.has(i) })),
     ...(block.closed && { correctWord: question.text }),
-    hearable: block.closed && speechOf(question) !== undefined,
+    hearable: hearable(block),
+  }
+}
+
+/** One option of a multiple-choice Block as the Participant sees it. */
+export interface MultipleChoiceOption {
+  text: string
+  chosen: boolean
+  /**
+   * Set once the Block is scored, on a right answer and on a chosen option: `right` for a right answer chosen,
+   * `wrong` for a wrong option chosen or a right answer missed. When time ran out before „Kész”, every right answer
+   * is `wrong`, as none was answered in time.
+   */
+  mark?: 'right' | 'wrong'
+  /** Once the Block is scored, an option left out of the scoring: neither chosen nor a right answer. */
+  faded: boolean
+}
+
+/** A multiple-choice Block as the Participant sees it: the question and its options in the order they are shown. */
+export interface MultipleChoiceView {
+  text: string
+  options: MultipleChoiceOption[]
+  /** The Question can be read aloud: whenever it has a `speak_text`. */
+  hearable: boolean
+}
+
+/** The multiple-choice Block on screen as the Participant sees it. */
+export function multipleChoiceView(block: Block): MultipleChoiceView {
+  const entry = onlyQuestion(block)
+  const { question, chosen = [] } = entry
+  const options = question.options ?? []
+  const right = optionsRight(entry)
+  return {
+    text: question.text,
+    options: block.optionOrder!.map((option): MultipleChoiceOption => {
+      const shown = { text: options[option], chosen: chosen.includes(option) }
+      const marked = block.closed && (shown.chosen || question.answer.includes(shown.text))
+      if (!marked) return { ...shown, faded: block.closed }
+      return { ...shown, mark: right[option] && !block.timedOut ? 'right' : 'wrong', faded: false }
+    }),
+    hearable: hearable(block),
   }
 }
 
@@ -150,9 +196,26 @@ export interface Speech {
   lang: string
 }
 
-/** How a Question's text is read aloud, or nothing if it has no `speak_text`. Its answer is never read. */
+/** How a Question's text is read aloud, or nothing if it has no `speak_text`. */
 export const speechOf = ({ text, speak_text }: PracticeQuestion): Speech | undefined =>
   speak_text ? { text, lang: speak_text } : undefined
+
+/** How an option of a multiple-choice Question is read aloud, or nothing if the Question has no `speak_answer`. */
+const optionSpeechOf = ({ options = [], speak_answer }: PracticeQuestion, option: number): Speech | undefined =>
+  speak_answer ? { text: options[option], lang: speak_answer } : undefined
+
+/**
+ * A spelling Block is read aloud only once it is scored, as hearing it earlier would give its answer away; it is
+ * then read after its Block sound, whether answered right or wrong.
+ */
+export const readOnlyOnceScored = (block: Block) => block.type === 'spelling'
+
+/** The single Question of a spelling or multiple-choice Block can be read aloud now: a spelling word only once scored. */
+const hearable = (block: Block) =>
+  (block.closed || !readOnlyOnceScored(block)) && speechOf(onlyQuestion(block).question) !== undefined
+
+/** The single Question of a spelling or multiple-choice Block. */
+const onlyQuestion = (block: Block) => block.questions[0]
 
 export interface PracticeState {
   /** Every Block of the Practice, in the order they are shown. */
@@ -166,7 +229,8 @@ export interface PracticeState {
   /** The Participant moved on from the last Block: show the summary. */
   finished: boolean
   /**
-   * The latest text to read aloud: the topmost unanswered statement, or one the Participant asked for.
+   * The latest text to read aloud: the topmost unanswered statement, a multiple-choice Question as it appears, an
+   * option just chosen, or one the Participant asked for.
    * A new one is a new object; it stays the same object until the next one, so it is read only once.
    */
   speech?: Speech
@@ -202,12 +266,16 @@ export function answer(state: PracticeState, questionIndex: number, value: TrueF
 
 /**
  * Reads aloud the topmost unanswered statement of the current true–false Block when it becomes the topmost
- * for the first time; without a `speak_text` it stays silent rather than reading the one below.
+ * for the first time; without a `speak_text` it stays silent rather than reading the one below. A multiple-choice
+ * Question is read once, as its Block appears.
  */
 function announce(state: PracticeState): PracticeState {
   const block = currentBlock(state)
-  if (!block || block.closed || block.type !== 'true-false') return state
-  const topIndex = block.questions.findIndex((entry) => entry.given === undefined)
+  if (!block || block.closed) return state
+  const topIndex =
+    block.type === 'true-false' ? block.questions.findIndex((entry) => entry.given === undefined)
+    : block.type === 'multiple-choice' ? 0
+    : -1
   if (topIndex < 0 || block.questions[topIndex].announced) return state
   const questions = block.questions.map((entry, i) => (i === topIndex ? { ...entry, announced: true } : entry))
   return { ...withCurrentBlock(state, { ...block, questions }), speech: speechOf(block.questions[topIndex].question) }
@@ -215,13 +283,12 @@ function announce(state: PracticeState): PracticeState {
 
 /**
  * Reads a Question of the current Block aloud on request, even once the Block is scored; without a
- * `speak_text` nothing is read, and a spelling word only once it is scored. Each request is a new speech,
- * so the same text can be heard again.
+ * `speak_text` nothing is read, and a spelling word only once it is scored. Each request
+ * is a new speech, so the same text can be heard again.
  */
 export function readAloud(state: PracticeState, questionIndex: number): PracticeState {
   const block = currentBlock(state)
-  // Hearing a spelling word would give its spelling away.
-  if (block.type === 'spelling' && !block.closed) return state
+  if (readOnlyOnceScored(block) && !block.closed) return state
   const speech = speechOf(block.questions[questionIndex].question)
   return speech ? { ...state, speech } : state
 }
@@ -284,13 +351,14 @@ const isFullyPaired = (block: Block) => block.questions.every((entry) => entry.p
 
 /**
  * Closes and scores the current Block; after the last one the Practice has its Result.
- * A word-matching Block closes only once every word is paired, a spelling Block once every letter is placed.
+ * A word-matching Block closes only once every word is paired, a spelling Block once every letter is placed;
+ * a true–false or multiple-choice Block whenever the Participant is done („Kész”).
  */
 export function closeBlock(state: PracticeState): PracticeState {
   const block = currentBlock(state)
   if (block.closed) return state
   if ((block.type === 'word-matching' && !isFullyPaired(block)) || (block.type === 'spelling' && !isFullySpelled(block))) return state
-  const closed = scoreCurrentBlock(state)
+  const closed = scoreCurrentBlock(state, { submitted: true })
   if (state.blockIndex < state.blocks.length - 1) return closed
   const elapsedSeconds = Math.min(Math.round(elapsedMs(state) / 1000), state.timeLimitSeconds)
   return { ...closed, result: score(closed, elapsedSeconds) }
@@ -304,24 +372,29 @@ export function tick(state: PracticeState): PracticeState {
   if (state.result) return state
   const remainingSeconds = Math.max(0, Math.ceil(state.timeLimitSeconds - elapsedMs(state) / 1000))
   if (remainingSeconds > 0) return remainingSeconds === state.remainingSeconds ? state : { ...state, remainingSeconds }
-  const closed = currentBlock(state).closed ? state : scoreCurrentBlock(state)
+  const closed = currentBlock(state).closed ? state : scoreCurrentBlock(state, { submitted: false })
   return { ...closed, remainingSeconds, result: score(closed, state.timeLimitSeconds) }
 }
 
 const elapsedMs = (state: PracticeState) => state.clock() - state.startedAt
 
-function scoreCurrentBlock(state: PracticeState): PracticeState {
+/**
+ * Scores the current Block: `submitted` by the Participant, or cut short as time ran out. A multiple-choice Question
+ * not submitted is wrong, whatever is chosen.
+ */
+function scoreCurrentBlock(state: PracticeState, { submitted }: { submitted: boolean }): PracticeState {
   const block = currentBlock(state)
   const correctOf = (entry: BlockQuestion, i: number) => {
     if (block.type === 'word-matching') return entry.paired === i
     if (block.type === 'spelling') return lettersRight(entry, block.tiles!).every(Boolean)
+    if (block.type === 'multiple-choice') return submitted && optionsRight(entry).every(Boolean)
     return entry.given === entry.question.answer[0]
   }
   const questions = block.questions.map((entry, i) => ({ ...entry, correct: correctOf(entry, i) }))
   const allCorrect = questions.every((entry) => entry.correct)
-  const scored = { ...withCurrentBlock(state, { ...block, questions, closed: true, allCorrect }), selection: undefined }
-  // A spelling word is heard once it is scored, whether right or wrong, so the Participant learns how it is said.
-  const speech = block.type === 'spelling' ? speechOf(block.questions[0].question) : undefined
+  const closed: Block = { ...block, questions, closed: true, allCorrect, ...(!submitted && { timedOut: true }) }
+  const scored = { ...withCurrentBlock(state, closed), selection: undefined }
+  const speech = readOnlyOnceScored(block) ? speechOf(onlyQuestion(block).question) : undefined
   return speech ? { ...scored, speech } : scored
 }
 
@@ -403,6 +476,7 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
       const block: Block = { type, questions: ofType.slice(offset, offset + count).map((question) => ({ question })), closed: false }
       if (type === 'word-matching') block.meaningOrder = shuffledApart([...block.questions.keys()], random)
       if (type === 'spelling') block.tiles = dealTiles(block.questions[0].question.text, random)
+      if (type === 'multiple-choice') block.optionOrder = shuffledApart([...(block.questions[0].question.options ?? []).keys()], random)
       offset += count
       return block
     })
@@ -418,6 +492,24 @@ function toBlocks(questions: PracticeQuestion[], random: () => number): Block[] 
     total -= block.questions.length
   }
   return blocks
+}
+
+/**
+ * Chooses an option of the current multiple-choice Block, given by its place among the options shown, or lets go
+ * of it if it is chosen; a scored Block ignores it. A chosen option is read aloud if the Question has a `speak_answer`.
+ */
+export function toggle(state: PracticeState, option: number): PracticeState {
+  const block = currentBlock(state)
+  if (block.closed || block.type !== 'multiple-choice') return state
+  const index = block.optionOrder![option]
+  if (index === undefined) return state
+  const entry = onlyQuestion(block)
+  const chosen = entry.chosen ?? []
+  const lettingGo = chosen.includes(index)
+  const questions = [{ ...entry, chosen: lettingGo ? chosen.filter((i) => i !== index) : [...chosen, index] }]
+  const toggled = withCurrentBlock(state, { ...block, questions })
+  const speech = lettingGo ? undefined : optionSpeechOf(entry.question, index)
+  return speech ? { ...toggled, speech } : toggled
 }
 
 /**
@@ -470,6 +562,10 @@ function takeBackLetter(state: PracticeState, letter: number): PracticeState {
   ]
   return withCurrentBlock(state, { ...block, questions })
 }
+
+/** For each option of a multiple-choice Question in turn, whether it is chosen exactly if it is a right answer. */
+const optionsRight = ({ question, chosen = [] }: BlockQuestion) =>
+  (question.options ?? []).map((option, i) => chosen.includes(i) === question.answer.includes(option))
 
 /** Every letter slot of the spelling word holds a tile; `placed` has one entry per letter once a tile is placed. */
 const isFullySpelled = (block: Block) => {

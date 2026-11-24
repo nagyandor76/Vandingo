@@ -107,10 +107,7 @@ describe('Practice engine', () => {
   })
 
   it('selects only playable types, and only those that fill a whole Block in the range', () => {
-    const others: PracticeQuestion[] = [
-      { type: 'multiple-choice', text: 'Melyek városok?', options: ['Théba', 'Róma'], answer: ['Théba'], time: 10 },
-      { type: 'ordered', text: 'Sorrend', options: ['a', 'b'], answer: ['a', 'b'], time: 10 },
-    ]
+    const others: PracticeQuestion[] = [{ type: 'ordered', text: 'Sorrend', options: ['a', 'b'], answer: ['a', 'b'], time: 10 }]
 
     expect(shownTexts(start([...statements(3), ...others])).sort()).toEqual(['Állítás 1', 'Állítás 2', 'Állítás 3'])
     expect(shownTexts(start([...statements(2), ...others]))).toEqual([])
@@ -405,7 +402,8 @@ describe('usable types of a range', () => {
   })
 
   it('never keeps a type that is not playable, and leaves nothing to start when no Block fills up', () => {
-    expect(usableTypes({ 'multiple-choice': 10, ordered: 10 })).toEqual([])
+    expect(usableTypes({ ordered: 10 })).toEqual([])
+    expect(usableTypes({ 'multiple-choice': 1, ordered: 10 })).toEqual(['multiple-choice'])
     expect(usableTypes({ 'true-false': 2, 'word-matching': 4 })).toEqual([])
   })
 })

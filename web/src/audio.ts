@@ -2,6 +2,7 @@
 // The Practice decides what to read aloud and when; this is where it is spoken and where the Block sounds are played.
 
 import type { Speech } from './practice/engine.ts'
+import { readingsOn } from './readings.ts'
 
 const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : undefined
 
@@ -20,10 +21,11 @@ function settleReading() {
 
 /**
  * Reads the text aloud in its language (e.g. `en-GB`), cutting off whatever was being read. Settles once the
- * reading is over: finished, cut off, or failed.
+ * reading is over: finished, cut off, or failed. With readings turned off on this device it reads nothing and
+ * settles at once, so what waits for the reading goes on as if it were over.
  */
 export function speak({ text, lang }: Speech): Promise<void> {
-  if (!synth) return Promise.resolve()
+  if (!synth || !readingsOn()) return Promise.resolve()
   settleReading()
   synth.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
