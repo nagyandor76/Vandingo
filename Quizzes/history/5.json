@@ -1,0 +1,235 @@
+{
+  "name": "A magyar állam virágkora (14–15. század)",
+  "subject": "history",
+  "difficulty": 5,
+  "default_time": 20,
+  "questions": [
+    { "type": "word-matching", "text": "tartományúr", "answer": ["nagybirtokos nemes, aki kiskirályként uralkodott"] },
+    { "type": "word-matching", "text": "janicsár", "answer": ["török gyalogos katona"] },
+    { "type": "word-matching", "text": "spáhi", "answer": ["török lovas katona"] },
+    { "type": "word-matching", "text": "szultán", "answer": ["a törökök vezére, legfőbb úr"] },
+    { "type": "word-matching", "text": "végvárrendszer", "answer": ["a déli határt védő erődítményhálózat"] },
+    { "type": "word-matching", "text": "zsoldos", "answer": ["pénzért harcoló katona"] },
+    { "type": "word-matching", "text": "corvina", "answer": ["Mátyás korában készült díszes kódex"] },
+    { "type": "word-matching", "text": "reneszánsz", "answer": ["korszak, amelynek középpontjában a földi élet és az ember áll"] },
+    { "type": "word-matching", "text": "perszonálunió", "answer": ["két országnak közös uralkodója van"] },
+    { "type": "word-matching", "text": "kilenced", "answer": ["a jobbágy adója a földesúrnak"] },
+
+    { "type": "word-matching", "text": "Kihal az Árpád-ház", "answer": ["1301"] },
+    { "type": "word-matching", "text": "Visegrádi királytalálkozó", "answer": ["1335"] },
+    { "type": "word-matching", "text": "Nagy Lajos törvényei", "answer": ["1351"] },
+    { "type": "word-matching", "text": "Nagy Lajos lengyel király lesz", "answer": ["1370"] },
+    { "type": "word-matching", "text": "Mária hozzámegy Zsigmondhoz", "answer": ["1387"] },
+    { "type": "word-matching", "text": "Nikápolyi vereség", "answer": ["1396"] },
+    { "type": "word-matching", "text": "Nándorfehérvári győzelem", "answer": ["1456"] },
+    { "type": "word-matching", "text": "Mátyás elfoglalja Bécset", "answer": ["1485"] },
+
+    { "type": "word-matching", "text": "Aragóniai Beatrix", "answer": ["Mátyás második felesége"] },
+    { "type": "word-matching", "text": "Hess András", "answer": ["nyomdát működtetett"] },
+    { "type": "word-matching", "text": "II. Mohamed", "answer": ["elfoglalta Konstantinápolyt"] },
+    { "type": "word-matching", "text": "III. Frigyes", "answer": ["Mátyás ellenfele a császári címért"] },
+    { "type": "word-matching", "text": "Johanna", "answer": ["nápolyi trónörökös"] },
+    { "type": "word-matching", "text": "Hunyadi László", "answer": ["V. László lefejeztette"] },
+
+    {
+      "type": "multiple-choice",
+      "text": "Melyik években uralkodott I. Károly (Károly Róbert)?",
+      "options": ["1301–1342", "1342–1382", "1387–1437", "1458–1490"],
+      "answer": ["1301–1342"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik években uralkodott Nagy Lajos?",
+      "options": ["1301–1342", "1342–1382", "1387–1437", "1458–1490"],
+      "answer": ["1342–1382"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik években uralkodott Hunyadi Mátyás?",
+      "options": ["1301–1342", "1342–1382", "1443–1456", "1458–1490"],
+      "answer": ["1458–1490"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mik voltak a törvényes koronázás feltételei?",
+      "options": [
+        "Az esztergomi érsek koronáz",
+        "A Szent Koronával koronáznak",
+        "A székesfehérvári bazilikában koronáznak",
+        "A pápa koronáz",
+        "Budán koronáznak"
+      ],
+      "answer": [
+        "Az esztergomi érsek koronáz",
+        "A Szent Koronával koronáznak",
+        "A székesfehérvári bazilikában koronáznak"
+      ],
+      "time": 30
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mi volt Károly Róbert fő feladata trónra lépése után?",
+      "options": [
+        "Leszámolni a tartományurakkal",
+        "Hadjáratot indítani a törökök ellen",
+        "Elfoglalni Bécset",
+        "Megszerezni a nápolyi trónt"
+      ],
+      "answer": ["Leszámolni a tartományurakkal"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik országok királyai találkoztak 1335-ben Visegrádon?",
+      "options": ["magyar", "lengyel", "cseh", "osztrák", "nápolyi"],
+      "answer": ["magyar", "lengyel", "cseh"],
+      "time": 25
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik pénzt verette Károly Róbert firenzei mintára?",
+      "options": ["aranyforint", "ezüstdénár", "tallér", "korona"],
+      "answer": ["aranyforint"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Miért indított Nagy Lajos hadjáratot Nápoly ellen?",
+      "options": [
+        "Bosszúból, mert meggyilkolták az öccsét, Andrást",
+        "Hogy megállítsa a törököket",
+        "Hogy német-római császár legyen",
+        "Hogy megszerezze a cseh koronát"
+      ],
+      "answer": ["Bosszúból, mert meggyilkolták az öccsét, Andrást"],
+      "time": 25
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mi igaz Nagy Lajos 1351-es törvényeire?",
+      "options": [
+        "Bevezették a kilencedet, amit a jobbágy a földesúrnak fizet",
+        "A földesurak megkapták az úriszéket és a pallosjogot",
+        "Kimondták, hogy minden nemes ugyanolyan rangú",
+        "Kötelezővé tették a jobbágyokból álló hadsereget"
+      ],
+      "answer": [
+        "Bevezették a kilencedet, amit a jobbágy a földesúrnak fizet",
+        "A földesurak megkapták az úriszéket és a pallosjogot",
+        "Kimondták, hogy minden nemes ugyanolyan rangú"
+      ],
+      "time": 35
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Milyen címeket szerzett meg Luxemburgi Zsigmond a magyar trónon kívül?",
+      "options": ["cseh király", "német király", "német-római császár", "lengyel király", "nápolyi király"],
+      "answer": ["cseh király", "német király", "német-római császár"],
+      "time": 25
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mit vezetett be Zsigmond a török veszély miatt?",
+      "options": [
+        "Minden földesúrnak hadsereget kellett kiállítania a jobbágyaiból",
+        "Megkezdte a végvárrendszer kiépítését",
+        "Felállította a fekete sereget",
+        "Bevezette a kilencedet"
+      ],
+      "answer": [
+        "Minden földesúrnak hadsereget kellett kiállítania a jobbágyaiból",
+        "Megkezdte a végvárrendszer kiépítését"
+      ],
+      "time": 30
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik csatákban szenvedett súlyos vereséget a magyar sereg a törököktől?",
+      "options": ["Nikápoly", "Várna", "Nándorfehérvár", "Bécs"],
+      "answer": ["Nikápoly", "Várna"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mivé választották a főnemesek Hunyadi Jánost a várnai csata után?",
+      "options": ["kormányzóvá", "királlyá", "esztergomi érsekké", "császárrá"],
+      "answer": ["kormányzóvá"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Kik voltak Hunyadi János fiai?",
+      "options": ["László", "Mátyás", "András", "Zsigmond"],
+      "answer": ["László", "Mátyás"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Hogyan halt meg Hunyadi János?",
+      "options": [
+        "A nándorfehérvári csata után kitört pestisben",
+        "A várnai csatában esett el",
+        "V. László lefejeztette",
+        "Prágában börtönben halt meg"
+      ],
+      "answer": ["A nándorfehérvári csata után kitört pestisben"],
+      "time": 25
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Mi igaz Mátyás fekete seregére?",
+      "options": [
+        "Zsoldosokból állt",
+        "Sok nemzetiségű volt",
+        "Fenntartása miatt emelni kellett az adót",
+        "A jobbágyokból sorozták ingyen"
+      ],
+      "answer": ["Zsoldosokból állt", "Sok nemzetiségű volt", "Fenntartása miatt emelni kellett az adót"],
+      "time": 30
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Hány könyv volt Mátyás budai könyvtárában?",
+      "options": ["kb. 200", "kb. 2000", "kb. 20 000", "kb. 50"],
+      "answer": ["kb. 2000"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Hol jelent meg a reneszánsz építészet Mátyás idején?",
+      "options": ["Buda", "Visegrád", "Nikápoly", "Várna"],
+      "answer": ["Buda", "Visegrád"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Ki került a trónra Mátyás után?",
+      "options": ["II. Ulászló", "V. László", "Mária", "Hunyadi László"],
+      "answer": ["II. Ulászló"]
+    },
+    {
+      "type": "multiple-choice",
+      "text": "Melyik uralkodóra igaz: „lovagkirály, hódító király, Nápoly ellen hadakozott”?",
+      "options": ["Nagy Lajos", "Károly Róbert", "Luxemburgi Zsigmond", "Hunyadi Mátyás"],
+      "answer": ["Nagy Lajos"]
+    },
+
+    { "type": "true-false", "text": "1301-ben kihalt az Árpád-ház, és megkezdődött a vegyes házi királyok kora.", "answer": ["true"] },
+    { "type": "true-false", "text": "Károly Róbertet 1308-ban ismerték el királynak.", "answer": ["true"] },
+    { "type": "true-false", "text": "Károly Róbert a belharcokban szerzett birtokokat és várakat a hozzá hű embereknek adományozta.", "answer": ["true"] },
+    { "type": "true-false", "text": "A bányabirtokosok maguk verethettek pénzt az aranyból és ezüstből.", "answer": ["false"] },
+    { "type": "true-false", "text": "Károly Róbert a kisebbik fiát, Andrást a nápolyi Johanna jegyesének szánta.", "answer": ["true"] },
+    { "type": "true-false", "text": "Nagy Lajos megszerezte a nápolyi trónt.", "answer": ["false"] },
+    { "type": "true-false", "text": "1370-ben Nagy Lajos lengyel király is lett.", "answer": ["true"] },
+    { "type": "true-false", "text": "Nagy Lajos 1342-től 1382-ig uralkodott.", "answer": ["true"] },
+    { "type": "true-false", "text": "Nagy Lajos apja után, 1342-ben került a trónra.", "answer": ["true"] },
+    { "type": "true-false", "text": "Az 1351-es törvények a pestis és az éhezés okozta válság után születtek.", "answer": ["true"] },
+    { "type": "true-false", "text": "Nagy Lajos után a lánya, Mária került a trónra.", "answer": ["true"] },
+    { "type": "true-false", "text": "Zsigmond rangokat és pozíciókat osztott, cserébe hűségesküt kért.", "answer": ["true"] },
+    { "type": "true-false", "text": "Zsigmond volt az első magyar király, aki hadjáratot indított a törökök ellen.", "answer": ["true"] },
+    { "type": "true-false", "text": "A törökök a keresztény hit hívei voltak.", "answer": ["false"] },
+    { "type": "true-false", "text": "Hunyadi János a hadi teljesítményéért hatalmas földeket kapott a déli országrészen.", "answer": ["true"] },
+    { "type": "true-false", "text": "Hunyadi gyalogságát szekérvárak védték.", "answer": ["true"] },
+    { "type": "true-false", "text": "Az 1443–1444-es hosszú hadjáratban a csaták többségét a magyarok elvesztették.", "answer": ["false"] },
+    { "type": "true-false", "text": "Hunyadi János a nándorfehérvári csatában maga is harcolt.", "answer": ["true"] },
+    { "type": "true-false", "text": "V. László Prágába vitte és bebörtönözte Mátyást.", "answer": ["true"] },
+    { "type": "true-false", "text": "Mátyás német-római császár szeretett volna lenni.", "answer": ["true"] },
+    { "type": "true-false", "text": "Bécs Mátyás haláláig magyar kézen maradt.", "answer": ["true"] },
+    { "type": "true-false", "text": "Mátyás könyvtáránál nagyobb csak a Vatikánban volt.", "answer": ["true"] },
+    { "type": "true-false", "text": "Mátyás halála után a meghódított területek magyar kézen maradtak.", "answer": ["false"] },
+    { "type": "true-false", "text": "Mátyás alakja a népmesékben idealizált képként él tovább.", "answer": ["true"] }
+  ]
+}
